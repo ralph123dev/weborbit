@@ -1,9 +1,9 @@
-import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { supabase } from '../services/supabase';
-import { useAuth } from '../hooks/useAuth';
-import { UserCheck, UserX, MessageSquare, Check, X, ArrowLeft } from 'lucide-react';
+import { ArrowLeft, Check, UserX, X } from 'lucide-react';
+import { useEffect, useState } from 'react';
 import { toast } from 'react-hot-toast';
+import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../hooks/useAuth';
+import { supabase } from '../services/supabase';
 import './InvitationsPage.css';
 
 export default function InvitationsPage() {
@@ -149,10 +149,11 @@ export default function InvitationsPage() {
               {receivedInvitations.map((inv) => (
                 <div key={inv.id} className="invitation-card glass">
                   <img 
-                    src={inv.sender?.avatar_url || 'https://via.placeholder.com/50'} 
+                    src={inv.sender?.avatar_url || 'https://static.vecteezy.com/system/resources/thumbnails/004/607/791/small_2x/man-face-emotive-icon-smiling-male-character-in-blue-shirt-flat-illustration-isolated-on-white-happy-human-psychological-portrait-positive-emotions-user-avatar-for-app-web-design-vector.jpg'} 
                     alt="Avatar" 
                     className="invitation-avatar"
                     onClick={() => navigate(`/profile/${inv.sender?.id}`)}
+                    onError={(e) => e.target.src = 'https://static.vecteezy.com/system/resources/thumbnails/004/607/791/small_2x/man-face-emotive-icon-smiling-male-character-in-blue-shirt-flat-illustration-isolated-on-white-happy-human-psychological-portrait-positive-emotions-user-avatar-for-app-web-design-vector.jpg'}
                   />
                   <div className="invitation-info">
                     <span 
@@ -199,10 +200,11 @@ export default function InvitationsPage() {
               {sentInvitations.map((inv) => (
                 <div key={inv.id} className="invitation-card glass">
                   <img 
-                    src={inv.receiver?.avatar_url || 'https://via.placeholder.com/50'} 
+                    src={inv.receiver?.avatar_url || 'https://static.vecteezy.com/system/resources/thumbnails/004/607/791/small_2x/man-face-emotive-icon-smiling-male-character-in-blue-shirt-flat-illustration-isolated-on-white-happy-human-psychological-portrait-positive-emotions-user-avatar-for-app-web-design-vector.jpg'} 
                     alt="Avatar" 
                     className="invitation-avatar"
                     onClick={() => navigate(`/profile/${inv.receiver?.id}`)}
+                    onError={(e) => e.target.src = 'https://static.vecteezy.com/system/resources/thumbnails/004/607/791/small_2x/man-face-emotive-icon-smiling-male-character-in-blue-shirt-flat-illustration-isolated-on-white-happy-human-psychological-portrait-positive-emotions-user-avatar-for-app-web-design-vector.jpg'}
                   />
                   <div className="invitation-info">
                     <span 

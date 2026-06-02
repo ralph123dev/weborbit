@@ -123,9 +123,10 @@ export default function Sidebar({ isOpen, onClose }) {
         <div className="sidebar-footer">
           <div className="user-mini-profile">
             <img 
-              src={profile.avatar_url || 'https://via.placeholder.com/40'} 
+              src={profile.avatar_url || 'https://static.vecteezy.com/system/resources/thumbnails/004/607/791/small_2x/man-face-emotive-icon-smiling-male-character-in-blue-shirt-flat-illustration-isolated-on-white-happy-human-psychological-portrait-positive-emotions-user-avatar-for-app-web-design-vector.jpg'} 
               alt={profile.first_name || 'User'} 
               className="user-avatar"
+              onError={(e) => e.target.src = 'https://static.vecteezy.com/system/resources/thumbnails/004/607/791/small_2x/man-face-emotive-icon-smiling-male-character-in-blue-shirt-flat-illustration-isolated-on-white-happy-human-psychological-portrait-positive-emotions-user-avatar-for-app-web-design-vector.jpg'}
             />
             <div className="user-info">
               <div className="user-name font-bold">{profile.first_name} {profile.last_name}</div>

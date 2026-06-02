@@ -1,9 +1,9 @@
-import { useState, useEffect } from 'react';
+import { ExternalLink, Heart, MessageSquare } from 'lucide-react';
+import { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
-import { supabase } from '../services/supabase';
-import { Heart, MessageSquare, Share2, ExternalLink } from 'lucide-react';
-import { formatTimeAgo, formatTextWithLinks } from '../utils/helpers';
 import logo from '../assets/logo.png';
+import { supabase } from '../services/supabase';
+import { formatTextWithLinks, formatTimeAgo } from '../utils/helpers';
 import './PostEmbedPage.css';
 
 export default function PostEmbedPage() {
@@ -77,10 +77,10 @@ export default function PostEmbedPage() {
       <div className="embed-header">
         <div className="embed-author" onClick={handleOpenApp}>
           <img 
-            src={post.profiles?.avatar_url || 'https://via.placeholder.com/40'} 
+            src={post.profiles?.avatar_url || 'https://static.vecteezy.com/system/resources/thumbnails/004/607/791/small_2x/man-face-emotive-icon-smiling-male-character-in-blue-shirt-flat-illustration-isolated-on-white-happy-human-psychological-portrait-positive-emotions-user-avatar-for-app-web-design-vector.jpg'} 
             alt="Avatar" 
             className="embed-avatar"
-            onError={(e) => e.target.src = 'https://via.placeholder.com/40'}
+            onError={(e) => e.target.src = 'https://static.vecteezy.com/system/resources/thumbnails/004/607/791/small_2x/man-face-emotive-icon-smiling-male-character-in-blue-shirt-flat-illustration-isolated-on-white-happy-human-psychological-portrait-positive-emotions-user-avatar-for-app-web-design-vector.jpg'}
           />
           <div className="embed-author-meta">
             <span className="embed-author-name font-bold">

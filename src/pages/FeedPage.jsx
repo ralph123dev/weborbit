@@ -462,10 +462,10 @@ export default function FeedPage() {
         <div className="composer glass">
           <div className="composer-input-area">
             <img 
-              src={profile?.avatar_url || 'https://via.placeholder.com/48'} 
+              src={profile?.avatar_url || 'https://static.vecteezy.com/system/resources/thumbnails/004/607/791/small_2x/man-face-emotive-icon-smiling-male-character-in-blue-shirt-flat-illustration-isolated-on-white-happy-human-psychological-portrait-positive-emotions-user-avatar-for-app-web-design-vector.jpg'} 
               alt="Avatar" 
               className="avatar"
-              onError={(e) => e.target.src = 'https://via.placeholder.com/48'}
+              onError={(e) => e.target.src = 'https://static.vecteezy.com/system/resources/thumbnails/004/607/791/small_2x/man-face-emotive-icon-smiling-male-character-in-blue-shirt-flat-illustration-isolated-on-white-happy-human-psychological-portrait-positive-emotions-user-avatar-for-app-web-design-vector.jpg'}
             />
             <textarea 
               className="composer-textarea"
@@ -544,10 +544,10 @@ export default function FeedPage() {
               <div key={post.id} className="post-card glass">
                 <div className="post-header">
                   <img 
-                    src={post.profiles?.avatar_url || 'https://via.placeholder.com/40'} 
+                    src={post.profiles?.avatar_url || 'https://static.vecteezy.com/system/resources/thumbnails/004/607/791/small_2x/man-face-emotive-icon-smiling-male-character-in-blue-shirt-flat-illustration-isolated-on-white-happy-human-psychological-portrait-positive-emotions-user-avatar-for-app-web-design-vector.jpg'} 
                     alt="Avatar" 
                     className="avatar clickable-avatar"
-                    onError={(e) => e.target.src = 'https://via.placeholder.com/40'}
+                    onError={(e) => e.target.src = 'https://static.vecteezy.com/system/resources/thumbnails/004/607/791/small_2x/man-face-emotive-icon-smiling-male-character-in-blue-shirt-flat-illustration-isolated-on-white-happy-human-psychological-portrait-positive-emotions-user-avatar-for-app-web-design-vector.jpg'}
                     onClick={() => handleOpenProfile(post.profiles)}
                   />
                   <div className="post-meta">
@@ -667,7 +667,7 @@ export default function FeedPage() {
             <div className="edit-modal-body">
               <div className="edit-modal-author">
                 <img 
-                  src={editingPost.profiles?.avatar_url || profile?.avatar_url || 'https://via.placeholder.com/40'}
+                  src={editingPost.profiles?.avatar_url || profile?.avatar_url || 'https://static.vecteezy.com/system/resources/thumbnails/004/607/791/small_2x/man-face-emotive-icon-smiling-male-character-in-blue-shirt-flat-illustration-isolated-on-white-happy-human-psychological-portrait-positive-emotions-user-avatar-for-app-web-design-vector.jpg'}
                   alt="Avatar"
                   className="avatar"
                 />
@@ -758,7 +758,7 @@ export default function FeedPage() {
           ) : (
             comments.map(comment => (
               <div key={comment.id} className="comment-item">
-                <img src={comment.profiles?.avatar_url || 'https://via.placeholder.com/40'} alt="Avatar" className="avatar" />
+                <img src={comment.profiles?.avatar_url || 'https://static.vecteezy.com/system/resources/thumbnails/004/607/791/small_2x/man-face-emotive-icon-smiling-male-character-in-blue-shirt-flat-illustration-isolated-on-white-happy-human-psychological-portrait-positive-emotions-user-avatar-for-app-web-design-vector.jpg'} alt="Avatar" className="avatar" />
                 <div className="comment-content">
                   <div className="comment-meta">
                     <span className="font-bold text-sm username-link" onClick={() => handleOpenProfile(comment.profiles)}>
@@ -856,10 +856,10 @@ export default function FeedPage() {
             </div>
             <div className="profile-panel-body">
               <img 
-                src={profilePanel.avatar_url || 'https://via.placeholder.com/80'} 
+                src={profilePanel.avatar_url || 'https://static.vecteezy.com/system/resources/thumbnails/004/607/791/small_2x/man-face-emotive-icon-smiling-male-character-in-blue-shirt-flat-illustration-isolated-on-white-happy-human-psychological-portrait-positive-emotions-user-avatar-for-app-web-design-vector.jpg'} 
                 alt="Avatar" 
                 className="profile-panel-avatar"
-                onError={(e) => e.target.src = 'https://via.placeholder.com/80'}
+                onError={(e) => e.target.src = 'https://static.vecteezy.com/system/resources/thumbnails/004/607/791/small_2x/man-face-emotive-icon-smiling-male-character-in-blue-shirt-flat-illustration-isolated-on-white-happy-human-psychological-portrait-positive-emotions-user-avatar-for-app-web-design-vector.jpg'}
               />
               <h3 className="font-black text-xl mt-3 flex items-center justify-center gap-1">
                 {profilePanel.first_name} {profilePanel.last_name}
@@ -942,10 +942,10 @@ export default function FeedPage() {
             <div className="mobile-composer-header">
               <div className="flex items-center gap-3">
                 <img 
-                  src={profile?.avatar_url || 'https://via.placeholder.com/40'} 
+                  src={profile?.avatar_url || 'https://static.vecteezy.com/system/resources/thumbnails/004/607/791/small_2x/man-face-emotive-icon-smiling-male-character-in-blue-shirt-flat-illustration-isolated-on-white-happy-human-psychological-portrait-positive-emotions-user-avatar-for-app-web-design-vector.jpg'} 
                   alt="Avatar" 
                   className="w-10 h-10 rounded-full object-cover"
-                  onError={(e) => e.target.src = 'https://via.placeholder.com/40'}
+                  onError={(e) => e.target.src = 'https://static.vecteezy.com/system/resources/thumbnails/004/607/791/small_2x/man-face-emotive-icon-smiling-male-character-in-blue-shirt-flat-illustration-isolated-on-white-happy-human-psychological-portrait-positive-emotions-user-avatar-for-app-web-design-vector.jpg'}
                 />
                 <div>
                   <div className="font-bold text-sm">{profile?.first_name} {profile?.last_name}</div>

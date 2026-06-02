@@ -369,10 +369,10 @@ export default function MessengerPage() {
                 onClick={() => openChat(conv)}
               >
                 <img 
-                  src={conv.profile?.avatar_url || 'https://via.placeholder.com/40'} 
+                  src={conv.profile?.avatar_url || 'https://static.vecteezy.com/system/resources/thumbnails/004/607/791/small_2x/man-face-emotive-icon-smiling-male-character-in-blue-shirt-flat-illustration-isolated-on-white-happy-human-psychological-portrait-positive-emotions-user-avatar-for-app-web-design-vector.jpg'} 
                   alt="Avatar" 
                   className="avatar" 
-                  onError={(e) => e.target.src = 'https://via.placeholder.com/40'}
+                  onError={(e) => e.target.src = 'https://static.vecteezy.com/system/resources/thumbnails/004/607/791/small_2x/man-face-emotive-icon-smiling-male-character-in-blue-shirt-flat-illustration-isolated-on-white-happy-human-psychological-portrait-positive-emotions-user-avatar-for-app-web-design-vector.jpg'}
                 />
                 <div className="conversation-info">
                   <div className="conversation-name font-bold flex items-center gap-1">
@@ -402,10 +402,10 @@ export default function MessengerPage() {
                   <ArrowLeft size={20} />
                 </button>
                 <img 
-                  src={activeChat.profile?.avatar_url || 'https://via.placeholder.com/40'} 
+                  src={activeChat.profile?.avatar_url || 'https://static.vecteezy.com/system/resources/thumbnails/004/607/791/small_2x/man-face-emotive-icon-smiling-male-character-in-blue-shirt-flat-illustration-isolated-on-white-happy-human-psychological-portrait-positive-emotions-user-avatar-for-app-web-design-vector.jpg'} 
                   alt="Avatar" 
                   className="avatar"
-                  onError={(e) => e.target.src = 'https://via.placeholder.com/40'}
+                  onError={(e) => e.target.src = 'https://static.vecteezy.com/system/resources/thumbnails/004/607/791/small_2x/man-face-emotive-icon-smiling-male-character-in-blue-shirt-flat-illustration-isolated-on-white-happy-human-psychological-portrait-positive-emotions-user-avatar-for-app-web-design-vector.jpg'}
                 />
                 <div>
                   <div className="font-bold">{getProfileName(activeChat.profile)}</div>

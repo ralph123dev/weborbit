@@ -1,11 +1,11 @@
-import { useState, useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
-import { supabase } from '../services/supabase';
+import { ArrowLeft, Calendar, Heart, MapPin, MessageSquare, MoreHorizontal, Share2 } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { useNavigate, useParams } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
-import { formatTimeAgo, formatCount, formatTextWithLinks } from '../utils/helpers';
-import { Heart, MessageSquare, Share2, MoreHorizontal, ArrowLeft, Settings, MapPin, Calendar, Link as LinkIcon } from 'lucide-react';
-import './ProfilePage.css';
+import { supabase } from '../services/supabase';
+import { formatCount, formatTextWithLinks, formatTimeAgo } from '../utils/helpers';
 import './FeedPage.css'; // Reuse post styles
+import './ProfilePage.css';
 
 export default function ProfilePage() {
   const { userId } = useParams();
@@ -116,10 +116,10 @@ export default function ProfilePage() {
       <div className="profile-details-section">
         <div className="profile-actions-row">
           <img 
-            src={profile.avatar_url || 'https://via.placeholder.com/150'} 
+            src={profile.avatar_url || 'https://static.vecteezy.com/system/resources/thumbnails/004/607/791/small_2x/man-face-emotive-icon-smiling-male-character-in-blue-shirt-flat-illustration-isolated-on-white-happy-human-psychological-portrait-positive-emotions-user-avatar-for-app-web-design-vector.jpg'} 
             alt="Avatar" 
             className="profile-large-avatar"
-            onError={(e) => e.target.src = 'https://via.placeholder.com/150'}
+            onError={(e) => e.target.src = 'https://static.vecteezy.com/system/resources/thumbnails/004/607/791/small_2x/man-face-emotive-icon-smiling-male-character-in-blue-shirt-flat-illustration-isolated-on-white-happy-human-psychological-portrait-positive-emotions-user-avatar-for-app-web-design-vector.jpg'}
           />
           <div className="flex-1"></div>
           {isOwnProfile ? (
@@ -187,7 +187,7 @@ export default function ProfilePage() {
             <div key={post.id} className="post-card glass mx-4">
               <div className="post-header">
                 <img 
-                  src={post.profiles?.avatar_url || 'https://via.placeholder.com/40'} 
+                  src={post.profiles?.avatar_url || 'https://static.vecteezy.com/system/resources/thumbnails/004/607/791/small_2x/man-face-emotive-icon-smiling-male-character-in-blue-shirt-flat-illustration-isolated-on-white-happy-human-psychological-portrait-positive-emotions-user-avatar-for-app-web-design-vector.jpg'} 
                   alt="Avatar" 
                   className="avatar"
                 />
