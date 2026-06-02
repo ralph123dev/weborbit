@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { supabase } from '../services/supabase';
 import { useAuth } from '../hooks/useAuth';
 import { formatTimeAgo, formatCount, uploadToCloudinary, formatTextWithLinks } from '../utils/helpers';
-import { Heart, MessageSquare, Share2, MoreHorizontal, Image as ImageIcon, X, Send, Copy, ArrowRight } from 'lucide-react';
+import { Heart, MessageSquare, Share2, MoreHorizontal, Image as ImageIcon, X, Send, Copy, ArrowRight, ArrowLeft, MapPin, Calendar } from 'lucide-react';
 import './FeedPage.css';
 
 export default function FeedPage() {
@@ -27,10 +27,14 @@ export default function FeedPage() {
   const [contacts, setContacts] = useState([]);
   const [isCopied, setIsCopied] = useState(false);
 
+  // User Profile Panel state
+  const [profilePanel, setProfilePanel] = useState(null);
+  const [profilePanelPosts, setProfilePanelPosts] = useState([]);
+  const [profilePanelLoading, setProfilePanelLoading] = useState(false);
+
   useEffect(() => {
     fetchPosts();
 
-    // Subscribe to realtime updates
     const subscription = supabase
       .channel('public:posts')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'posts' }, payload => {
@@ -136,7 +140,7 @@ export default function FeedPage() {
     setActiveCommentPost(post);
     setReplyingTo(null);
     fetchComments(post.id);
-    document.body.style.overflow = 'hidden'; // Prevent background scrolling
+    document.body.style.overflow = 'hidden';
   };
 
   const handleCloseComments = () => {
@@ -178,7 +182,6 @@ export default function FeedPage() {
       setNewComment('');
       setReplyingTo(null);
       
-      // Update post comment count optimistically
       setPosts(prev => prev.map(p => 
         p.id === activeCommentPost.id ? { ...p, comments_count: (p.comments_count || 0) + 1 } : p
       ));
@@ -232,6 +235,40 @@ export default function FeedPage() {
     } catch (err) {
       console.error(err);
       alert("Erreur lors de l'envoi");
+    }
+  };
+
+  // --- Profile Panel ---
+  const handleOpenProfile = async (profileData) => {
+    if (!profileData?.id) return;
+    setProfilePanelLoading(true);
+    setProfilePanel(null);
+    setProfilePanelPosts([]);
+    document.body.style.overflow = 'hidden';
+
+    const { data: fullProfile } = await supabase
+      .from('profiles')
+      .select('*')
+      .eq('id', profileData.id)
+      .single();
+
+    const { data: userPosts } = await supabase
+      .from('posts')
+      .select('*, profiles(id, first_name, last_name, username, avatar_url, is_verified)')
+      .eq('user_id', profileData.id)
+      .order('created_at', { ascending: false })
+      .limit(10);
+
+    setProfilePanel(fullProfile);
+    setProfilePanelPosts(userPosts || []);
+    setProfilePanelLoading(false);
+  };
+
+  const handleCloseProfile = () => {
+    setProfilePanel(null);
+    setProfilePanelPosts([]);
+    if (!activeCommentPost) {
+      document.body.style.overflow = '';
     }
   };
 
@@ -297,7 +334,6 @@ export default function FeedPage() {
 
         <div className="posts-container">
           {loading ? (
-            // Skeleton Loading
             [1, 2, 3].map((item) => (
               <div key={item} className="post-card glass">
                 <div className="post-header">
@@ -323,19 +359,28 @@ export default function FeedPage() {
                 <div className="post-header">
                   <img 
                     src={post.profiles?.avatar_url || 'https://via.placeholder.com/40'} 
-                    alt={post.profiles?.nom} 
-                    className="avatar"
+                    alt="Avatar" 
+                    className="avatar clickable-avatar"
                     onError={(e) => e.target.src = 'https://via.placeholder.com/40'}
+                    onClick={() => handleOpenProfile(post.profiles)}
                   />
                   <div className="post-meta">
                     <div className="post-author-name font-bold flex items-center gap-1">
-                      {post.profiles?.first_name} {post.profiles?.last_name}
+                      <span 
+                        className="username-link"
+                        onClick={() => handleOpenProfile(post.profiles)}
+                      >
+                        {post.profiles?.first_name} {post.profiles?.last_name}
+                      </span>
                       {post.profiles?.is_verified && (
                         <span className="text-primary" title="Vérifié">✓</span>
                       )}
                     </div>
                     <div className="post-time text-secondary text-sm">
-                      @{post.profiles?.username} • {formatTimeAgo(post.created_at)}
+                      <span className="username-handle" onClick={() => handleOpenProfile(post.profiles)}>
+                        @{post.profiles?.username}
+                      </span>
+                      {' '}• {formatTimeAgo(post.created_at)}
                     </div>
                   </div>
                   <button className="post-options-btn">
@@ -421,7 +466,7 @@ export default function FeedPage() {
         </div>
       )}
 
-      {/* Comments Side Navigation Panel */}
+      {/* Comments Side Panel */}
       <div className={`comments-panel ${activeCommentPost ? 'open' : ''}`}>
         <div className="comments-header glass">
           <h3 className="font-bold text-lg">Commentaires</h3>
@@ -441,7 +486,9 @@ export default function FeedPage() {
                 <img src={comment.profiles?.avatar_url || 'https://via.placeholder.com/40'} alt="Avatar" className="avatar" />
                 <div className="comment-content">
                   <div className="comment-meta">
-                    <span className="font-bold text-sm">{comment.profiles?.first_name} {comment.profiles?.last_name}</span>
+                    <span className="font-bold text-sm username-link" onClick={() => handleOpenProfile(comment.profiles)}>
+                      {comment.profiles?.first_name} {comment.profiles?.last_name}
+                    </span>
                     <span className="text-xs text-secondary ml-2">{formatTimeAgo(comment.created_at)}</span>
                   </div>
                   {comment.parent_id && (
@@ -485,9 +532,96 @@ export default function FeedPage() {
         </div>
       </div>
       
-      {/* Overlay to close comments when clicking outside on mobile */}
       {activeCommentPost && (
         <div className="comments-overlay" onClick={handleCloseComments}></div>
+      )}
+
+      {/* User Profile Side Panel */}
+      <div className={`user-profile-panel ${(profilePanel || profilePanelLoading) ? 'open' : ''}`}>
+        {profilePanelLoading ? (
+          <div className="profile-panel-loading">
+            <div className="skeleton" style={{ width: '80px', height: '80px', borderRadius: '50%' }}></div>
+            <div className="skeleton line medium mt-4"></div>
+            <div className="skeleton line short mt-2"></div>
+          </div>
+        ) : profilePanel && (
+          <>
+            <div className="profile-panel-header">
+              <button className="icon-btn" onClick={handleCloseProfile}><X size={20} /></button>
+            </div>
+            <div className="profile-panel-cover">
+              <div className="profile-panel-cover-gradient"></div>
+            </div>
+            <div className="profile-panel-body">
+              <img 
+                src={profilePanel.avatar_url || 'https://via.placeholder.com/80'} 
+                alt="Avatar" 
+                className="profile-panel-avatar"
+                onError={(e) => e.target.src = 'https://via.placeholder.com/80'}
+              />
+              <h3 className="font-black text-xl mt-3 flex items-center justify-center gap-1">
+                {profilePanel.first_name} {profilePanel.last_name}
+                {profilePanel.is_verified && <span className="text-primary">✓</span>}
+              </h3>
+              <div className="text-secondary text-sm">@{profilePanel.username}</div>
+              
+              {profilePanel.bio && (
+                <p className="profile-panel-bio mt-3">{profilePanel.bio}</p>
+              )}
+
+              <div className="profile-panel-meta mt-3">
+                {profilePanel.country && (
+                  <div className="meta-item text-secondary text-sm">
+                    <MapPin size={14} /> {profilePanel.country}
+                  </div>
+                )}
+                <div className="meta-item text-secondary text-sm">
+                  <Calendar size={14} /> Rejoint en {new Date(profilePanel.created_at).toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' })}
+                </div>
+              </div>
+
+              <div className="profile-panel-stats mt-4">
+                <div className="stat"><span className="font-bold">{formatCount(profilePanel.followers_count || 0)}</span> abonnés</div>
+                <div className="stat"><span className="font-bold">{formatCount(profilePanel.following_count || 0)}</span> abonnements</div>
+              </div>
+            </div>
+
+            <div className="profile-panel-divider"></div>
+            <h4 className="font-bold text-sm px-4 mb-2 text-secondary">Publications</h4>
+
+            <div className="profile-panel-posts">
+              {profilePanelPosts.length === 0 ? (
+                <div className="text-center p-4 text-secondary text-sm">Aucun post</div>
+              ) : (
+                profilePanelPosts.map(post => (
+                  <div key={post.id} className="profile-panel-post-item">
+                    <div 
+                      className="text-sm"
+                      dangerouslySetInnerHTML={{ __html: formatTextWithLinks(post.content?.substring(0, 150) + (post.content?.length > 150 ? '...' : '')) }}
+                    />
+                    {(post.image_url || (post.image_urls && post.image_urls.length > 0)) && (
+                      <img 
+                        src={post.image_urls?.[0] || post.image_url} 
+                        alt="Post" 
+                        className="profile-panel-post-img mt-2" 
+                        loading="lazy"
+                      />
+                    )}
+                    <div className="flex items-center gap-4 mt-2 text-secondary text-xs">
+                      <span>❤️ {formatCount(post.likes_count)}</span>
+                      <span>💬 {formatCount(post.comments_count)}</span>
+                      <span>{formatTimeAgo(post.created_at)}</span>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+          </>
+        )}
+      </div>
+
+      {(profilePanel || profilePanelLoading) && (
+        <div className="profile-panel-overlay" onClick={handleCloseProfile}></div>
       )}
     </div>
   );
