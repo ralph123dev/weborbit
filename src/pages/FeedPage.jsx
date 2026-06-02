@@ -13,6 +13,11 @@ export default function FeedPage() {
   const [selectedImages, setSelectedImages] = useState([]);
   const [isPublishing, setIsPublishing] = useState(false);
 
+  // Edit/Delete Post State
+  const [editingPost, setEditingPost] = useState(null);
+  const [editContent, setEditContent] = useState('');
+  const [postDropdownOpen, setPostDropdownOpen] = useState(null);
+
   // Comments state
   const [activeCommentPost, setActiveCommentPost] = useState(null);
   const [comments, setComments] = useState([]);
@@ -60,10 +65,11 @@ export default function FeedPage() {
         .from('posts')
         .select(`
           *,
-          profiles (id, first_name, last_name, username, avatar_url, is_verified, is_ambassador)
+          profiles (id, first_name, last_name, username, avatar_url, is_verified, is_ambassador),
+          comments(count),
+          likes(count)
         `)
-        .order('created_at', { ascending: false })
-        .limit(20);
+        .order('created_at', { ascending: false });
 
       if (error) throw error;
       setPosts(data || []);
@@ -77,7 +83,7 @@ export default function FeedPage() {
   const fetchSinglePost = async (id) => {
     const { data } = await supabase
       .from('posts')
-      .select('*, profiles (id, first_name, last_name, username, avatar_url, is_verified, is_ambassador)')
+      .select('*, profiles (id, first_name, last_name, username, avatar_url, is_verified, is_ambassador), comments(count), likes(count)')
       .eq('id', id)
       .single();
     
@@ -129,10 +135,70 @@ export default function FeedPage() {
 
   const handleLike = async (postId, currentLikes) => {
     if (!user) return;
-    setPosts(prev => prev.map(p => 
-      p.id === postId ? { ...p, likes_count: (p.likes_count || 0) + 1 } : p
-    ));
-    await supabase.from('posts').update({ likes_count: currentLikes + 1 }).eq('id', postId);
+    
+    // Optimistic UI update
+    setPosts(prev => prev.map(p => {
+      if (p.id === postId) {
+        return { 
+          ...p, 
+          likes: [{ count: currentLikes + 1 }],
+          likes_count: currentLikes + 1 
+        };
+      }
+      return p;
+    }));
+
+    try {
+      const { data: existingLike } = await supabase
+        .from('likes')
+        .select('*')
+        .eq('post_id', postId)
+        .eq('user_id', user.id)
+        .single();
+        
+      if (!existingLike) {
+        await supabase.from('likes').insert({ post_id: postId, user_id: user.id });
+        
+        // Add notification for the post author
+        const postAuthor = posts.find(p => p.id === postId)?.user_id;
+        if (postAuthor && postAuthor !== user.id) {
+          await supabase.from('notifications').insert({
+            user_id: postAuthor,
+            sender_id: user.id,
+            type: 'like',
+            post_id: postId,
+            content: "a aimé votre post"
+          });
+        }
+      }
+    } catch (e) { console.error(e) }
+  };
+
+  const handleEditPost = async () => {
+    if (!editingPost || !editContent.trim()) return;
+    try {
+      const { error } = await supabase.from('posts').update({ content: editContent.trim() }).eq('id', editingPost.id);
+      if (error) throw error;
+      setPosts(prev => prev.map(p => p.id === editingPost.id ? { ...p, content: editContent.trim() } : p));
+      setEditingPost(null);
+      setEditContent('');
+    } catch (err) {
+      console.error(err);
+      alert('Erreur lors de la modification');
+    }
+  };
+
+  const handleDeletePost = async (postId) => {
+    if (!window.confirm('Voulez-vous vraiment supprimer ce post ?')) return;
+    try {
+      const { error } = await supabase.from('posts').delete().eq('id', postId);
+      if (error) throw error;
+      setPosts(prev => prev.filter(p => p.id !== postId));
+      setPostDropdownOpen(null);
+    } catch (err) {
+      console.error(err);
+      alert('Erreur lors de la suppression');
+    }
   };
 
   // --- Comments Logic ---
@@ -238,7 +304,32 @@ export default function FeedPage() {
     }
   };
 
-  // --- Profile Panel ---
+  // --- Profile Panel & Invitations ---
+  const handleSendInvitation = async () => {
+    if (!user || !profilePanel) return;
+    try {
+      const { error } = await supabase.from('invitations').insert({
+        sender_id: user.id,
+        receiver_id: profilePanel.id,
+        status: 'pending'
+      });
+      if (error) throw error;
+      
+      // Also send notification
+      await supabase.from('notifications').insert({
+        user_id: profilePanel.id,
+        sender_id: user.id,
+        type: 'invitation',
+        content: "vous a envoyé une invitation"
+      });
+      
+      alert('Invitation envoyée !');
+    } catch (err) {
+      console.error(err);
+      alert("Erreur lors de l'envoi de l'invitation");
+    }
+  };
+
   const handleOpenProfile = async (profileData) => {
     if (!profileData?.id) return;
     setProfilePanelLoading(true);
@@ -383,9 +474,34 @@ export default function FeedPage() {
                       {' '}• {formatTimeAgo(post.created_at)}
                     </div>
                   </div>
-                  <button className="post-options-btn">
-                    <MoreHorizontal size={20} />
-                  </button>
+                  
+                  {post.user_id === user?.id && (
+                    <div className="relative">
+                      <button className="post-options-btn" onClick={() => setPostDropdownOpen(postDropdownOpen === post.id ? null : post.id)}>
+                        <MoreHorizontal size={20} />
+                      </button>
+                      {postDropdownOpen === post.id && (
+                        <div className="absolute right-0 mt-2 w-48 glass rounded-xl shadow-lg overflow-hidden z-20" style={{ border: '1px solid var(--border-color)' }}>
+                          <button 
+                            className="w-full text-left px-4 py-3 hover:bg-white/10 text-sm transition-colors"
+                            onClick={() => {
+                              setEditingPost(post);
+                              setEditContent(post.content);
+                              setPostDropdownOpen(null);
+                            }}
+                          >
+                            ✏️ Modifier
+                          </button>
+                          <button 
+                            className="w-full text-left px-4 py-3 hover:bg-white/10 text-sm text-red-500 transition-colors border-t border-white/10"
+                            onClick={() => handleDeletePost(post.id)}
+                          >
+                            🗑️ Supprimer
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </div>
                 
                 <div className="post-body">
@@ -414,13 +530,13 @@ export default function FeedPage() {
                 </div>
 
                 <div className="post-actions">
-                  <button className="post-action-btn" onClick={() => handleLike(post.id, post.likes_count || 0)}>
+                  <button className="post-action-btn" onClick={() => handleLike(post.id, post.likes?.[0]?.count || post.likes_count || 0)}>
                     <Heart size={20} />
-                    <span>{formatCount(post.likes_count)}</span>
+                    <span>{formatCount(post.likes?.[0]?.count || post.likes_count || 0)}</span>
                   </button>
                   <button className="post-action-btn" onClick={() => handleOpenComments(post)}>
                     <MessageSquare size={20} />
-                    <span>{formatCount(post.comments_count)}</span>
+                    <span>{formatCount(post.comments?.[0]?.count || post.comments_count || 0)}</span>
                   </button>
                   <button className="post-action-btn" onClick={() => handleOpenShare(post)}>
                     <Share2 size={20} />
@@ -431,6 +547,24 @@ export default function FeedPage() {
           )}
         </div>
       </div>
+
+      {/* Edit Post Modal */}
+      {editingPost && (
+        <div className="modal-overlay">
+          <div className="glass p-6 rounded-2xl w-full max-w-lg relative">
+            <h3 className="font-bold text-xl mb-4">Modifier le post</h3>
+            <textarea 
+              className="w-full bg-transparent border border-white/20 p-4 rounded-xl min-h-[150px] mb-4 text-primary resize-none focus:outline-none focus:border-primary"
+              value={editContent}
+              onChange={(e) => setEditContent(e.target.value)}
+            />
+            <div className="flex justify-end gap-3">
+              <button className="btn btn-outline" onClick={() => setEditingPost(null)}>Annuler</button>
+              <button className="btn btn-primary" onClick={handleEditPost}>Enregistrer</button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Share Modal */}
       {sharePost && (
@@ -547,10 +681,19 @@ export default function FeedPage() {
         ) : profilePanel && (
           <>
             <div className="profile-panel-header">
+              {profilePanel.id !== user?.id && (
+                <button className="btn btn-primary text-xs py-1 px-3 mr-auto flex items-center gap-2" onClick={handleSendInvitation}>
+                  + Inviter
+                </button>
+              )}
               <button className="icon-btn" onClick={handleCloseProfile}><X size={20} /></button>
             </div>
             <div className="profile-panel-cover">
-              <div className="profile-panel-cover-gradient"></div>
+              {profilePanel.cover_url ? (
+                <img src={profilePanel.cover_url} alt="Cover" className="w-full h-full object-cover" />
+              ) : (
+                <div className="profile-panel-cover-gradient"></div>
+              )}
             </div>
             <div className="profile-panel-body">
               <img 
@@ -607,10 +750,16 @@ export default function FeedPage() {
                         loading="lazy"
                       />
                     )}
-                    <div className="flex items-center gap-4 mt-2 text-secondary text-xs">
-                      <span>❤️ {formatCount(post.likes_count)}</span>
-                      <span>💬 {formatCount(post.comments_count)}</span>
-                      <span>{formatTimeAgo(post.created_at)}</span>
+                    <div className="flex items-center gap-4 mt-3 pt-3 border-t border-white/10 text-secondary">
+                      <button className="flex items-center gap-1 hover:text-primary transition-colors" onClick={() => handleLike(post.id, post.likes?.[0]?.count || post.likes_count || 0)}>
+                        <Heart size={16} /> <span className="text-xs">{formatCount(post.likes?.[0]?.count || post.likes_count || 0)}</span>
+                      </button>
+                      <button className="flex items-center gap-1 hover:text-primary transition-colors" onClick={() => handleOpenComments(post)}>
+                        <MessageSquare size={16} /> <span className="text-xs">{formatCount(post.comments?.[0]?.count || post.comments_count || 0)}</span>
+                      </button>
+                      <button className="flex items-center gap-1 hover:text-primary transition-colors" onClick={() => handleOpenShare(post)}>
+                        <Share2 size={16} />
+                      </button>
                     </div>
                   </div>
                 ))

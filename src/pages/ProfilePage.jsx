@@ -42,7 +42,9 @@ export default function ProfilePage() {
         .from('posts')
         .select(`
           *,
-          profiles (id, first_name, last_name, username, avatar_url, is_verified)
+          profiles (id, first_name, last_name, username, avatar_url, is_verified),
+          comments(count),
+          likes(count)
         `)
         .eq('user_id', userId)
         .order('created_at', { ascending: false });
@@ -104,8 +106,11 @@ export default function ProfilePage() {
 
       {/* Cover Image */}
       <div className="profile-cover">
-        {/* You could add a cover_url to the profiles table. We use a gradient fallback. */}
-        <div className="profile-cover-gradient"></div>
+        {profile.cover_url ? (
+          <img src={profile.cover_url} alt="Cover" className="w-full h-full object-cover" />
+        ) : (
+          <div className="profile-cover-gradient"></div>
+        )}
       </div>
 
       <div className="profile-details-section">
@@ -222,11 +227,11 @@ export default function ProfilePage() {
               <div className="post-actions">
                 <button className="post-action-btn">
                   <Heart size={20} />
-                  <span>{formatCount(post.likes_count)}</span>
+                  <span>{formatCount(post.likes?.[0]?.count || post.likes_count || 0)}</span>
                 </button>
                 <button className="post-action-btn">
                   <MessageSquare size={20} />
-                  <span>{formatCount(post.comments_count)}</span>
+                  <span>{formatCount(post.comments?.[0]?.count || post.comments_count || 0)}</span>
                 </button>
                 <button className="post-action-btn">
                   <Share2 size={20} />

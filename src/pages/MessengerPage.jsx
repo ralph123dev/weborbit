@@ -25,6 +25,7 @@ export default function MessengerPage() {
   const [messagesLoading, setMessagesLoading] = useState(false);
   const [showStickers, setShowStickers] = useState(false);
   const [showMobileChat, setShowMobileChat] = useState(false);
+  const [replyTo, setReplyTo] = useState(null);
   const messagesEndRef = useRef(null);
   const fileInputRef = useRef(null);
 
@@ -151,8 +152,11 @@ export default function MessengerPage() {
         sender_id: user.id,
         receiver_id: activeChat.user_id,
         content: content,
-        is_read: false
+        is_read: false,
+        reply_to_id: replyTo?.id || null
       });
+      
+      setReplyTo(null);
       
       setConversations(prev => prev.map(conv => 
         conv.user_id === activeChat.user_id 
@@ -176,8 +180,11 @@ export default function MessengerPage() {
         receiver_id: activeChat.user_id,
         content: '',
         image_url: imageUrl,
-        is_read: false
+        is_read: false,
+        reply_to_id: replyTo?.id || null
       });
+
+      setReplyTo(null);
 
       setConversations(prev => prev.map(conv => 
         conv.user_id === activeChat.user_id 
@@ -199,8 +206,11 @@ export default function MessengerPage() {
         sender_id: user.id,
         receiver_id: activeChat.user_id,
         content: emoji,
-        is_read: false
+        is_read: false,
+        reply_to_id: replyTo?.id || null
       });
+      
+      setReplyTo(null);
       
       setConversations(prev => prev.map(conv => 
         conv.user_id === activeChat.user_id 
@@ -336,8 +346,25 @@ export default function MessengerPage() {
                 messages.map((msg, idx) => {
                   const isMine = msg.sender_id === user?.id;
                   const isEmoji = isSingleEmoji(msg.content);
+                  const repliedMsg = msg.reply_to_id ? messages.find(m => m.id === msg.reply_to_id) : null;
+
                   return (
-                    <div key={msg.id || idx} className={`message-wrapper ${isMine ? 'mine' : 'theirs'}`}>
+                    <div key={msg.id || idx} className={`message-wrapper ${isMine ? 'mine' : 'theirs'} group`}>
+                      <button 
+                        className={`reply-icon-btn ${isMine ? 'left-side' : 'right-side'} opacity-0 group-hover:opacity-100 transition-opacity`}
+                        onClick={() => setReplyTo(msg)}
+                        title="Répondre"
+                      >
+                        ↩️
+                      </button>
+
+                      {repliedMsg && (
+                        <div className={`message-quote ${isMine ? 'mine' : 'theirs'}`}>
+                          <div className="quote-author">{repliedMsg.sender_id === user.id ? 'Vous' : getProfileName(activeChat.profile)}</div>
+                          <div className="quote-content truncate">{repliedMsg.image_url ? '📷 Image' : repliedMsg.content}</div>
+                        </div>
+                      )}
+
                       {msg.image_url ? (
                         <div className={`message-image-wrapper ${isMine ? 'mine' : 'theirs'}`}>
                           <img src={msg.image_url} alt="Image" className="message-image" loading="lazy" />
@@ -375,6 +402,16 @@ export default function MessengerPage() {
                     </button>
                   ))}
                 </div>
+              </div>
+            )}
+
+            {replyTo && (
+              <div className="chat-replying-banner glass">
+                <div className="flex-1 overflow-hidden">
+                  <div className="text-xs text-primary font-bold">En réponse à {replyTo.sender_id === user.id ? 'vous' : getProfileName(activeChat.profile)}</div>
+                  <div className="text-sm truncate text-secondary">{replyTo.image_url ? '📷 Image' : replyTo.content}</div>
+                </div>
+                <button className="icon-btn text-secondary" onClick={() => setReplyTo(null)}><X size={16} /></button>
               </div>
             )}
 

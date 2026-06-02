@@ -22,6 +22,13 @@ export default function SettingsPage() {
   const [editBio, setEditBio] = useState(profile?.bio || '');
   const [editAge, setEditAge] = useState(profile?.age || '');
   const [editRelationship, setEditRelationship] = useState(profile?.relationship_status || '');
+  
+  // Images
+  const [avatarFile, setAvatarFile] = useState(null);
+  const [avatarPreview, setAvatarPreview] = useState(profile?.avatar_url || '');
+  const [coverFile, setCoverFile] = useState(null);
+  const [coverPreview, setCoverPreview] = useState(profile?.cover_url || '');
+  
   const [saving, setSaving] = useState(false);
 
   const [showNotifications, setShowNotifications] = useState(false);
@@ -69,18 +76,47 @@ export default function SettingsPage() {
   const handleSaveProfile = async () => {
     setSaving(true);
     try {
+      let finalAvatarUrl = profile?.avatar_url || '';
+      let finalCoverUrl = profile?.cover_url || '';
+
+      if (avatarFile) {
+        finalAvatarUrl = await uploadToCloudinary(avatarFile);
+      }
+      
+      if (coverFile) {
+        finalCoverUrl = await uploadToCloudinary(coverFile);
+      }
+
       const updates = {
         first_name: editFirstName,
         last_name: editLastName,
         bio: editBio,
         age: editAge ? parseInt(editAge) : null,
         relationship_status: editRelationship || null,
+        avatar_url: finalAvatarUrl,
         updated_at: new Date().toISOString()
       };
+
+      // Only add cover_url to updates if we actually have one or if the user specifically added it
+      // This prevents errors if the cover_url column is not yet created in Supabase
+      if (finalCoverUrl !== '' || profile?.cover_url !== undefined) {
+        updates.cover_url = finalCoverUrl;
+      }
+      
       const { error } = await supabase.from('profiles').update(updates).eq('id', user.id);
-      if (error) throw error;
+      
+      if (error) {
+        if (error.message.includes('cover_url')) {
+          alert("⚠️ Erreur : La colonne 'cover_url' n'existe pas encore dans votre base de données Supabase. Veuillez l'ajouter dans la table 'profiles'.");
+          return;
+        }
+        throw error;
+      }
+      
       setProfile(prev => ({ ...prev, ...updates }));
       setShowProfileEditor(false);
+      setAvatarFile(null);
+      setCoverFile(null);
       alert('Profil mis à jour avec succès !');
     } catch (err) {
       console.error(err);
@@ -184,6 +220,52 @@ export default function SettingsPage() {
           
           {showProfileEditor && (
             <div className="profile-editor">
+              <div className="editor-row images-editor-row flex gap-4 mb-4">
+                <div className="flex-1">
+                  <label className="text-sm font-bold block mb-2">Photo de profil</label>
+                  <label className="cursor-pointer block">
+                    <div className="w-20 h-20 rounded-full overflow-hidden bg-surface-hover flex items-center justify-center border-2 border-primary">
+                      {avatarPreview ? (
+                        <img src={avatarPreview} alt="Avatar" className="w-full h-full object-cover" />
+                      ) : (
+                        <span className="text-xs text-secondary">Ajouter</span>
+                      )}
+                    </div>
+                    <input 
+                      type="file" accept="image/*" className="hidden"
+                      onChange={e => {
+                        if (e.target.files[0]) {
+                          setAvatarFile(e.target.files[0]);
+                          setAvatarPreview(URL.createObjectURL(e.target.files[0]));
+                        }
+                      }}
+                    />
+                  </label>
+                </div>
+                
+                <div className="flex-1">
+                  <label className="text-sm font-bold block mb-2">Photo de couverture</label>
+                  <label className="cursor-pointer block">
+                    <div className="w-full h-20 rounded-xl overflow-hidden bg-surface-hover flex items-center justify-center border-2 border-primary border-dashed">
+                      {coverPreview ? (
+                        <img src={coverPreview} alt="Cover" className="w-full h-full object-cover" />
+                      ) : (
+                        <span className="text-xs text-secondary">Ajouter</span>
+                      )}
+                    </div>
+                    <input 
+                      type="file" accept="image/*" className="hidden"
+                      onChange={e => {
+                        if (e.target.files[0]) {
+                          setCoverFile(e.target.files[0]);
+                          setCoverPreview(URL.createObjectURL(e.target.files[0]));
+                        }
+                      }}
+                    />
+                  </label>
+                </div>
+              </div>
+
               <div className="editor-row">
                 <label>Prénom</label>
                 <input type="text" value={editFirstName} onChange={(e) => setEditFirstName(e.target.value)} placeholder="Votre prénom" />
