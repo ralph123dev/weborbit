@@ -1,6 +1,6 @@
 import { NavLink } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
-import { Home, Video, MessageCircle, User, Settings, Bot, LogOut } from 'lucide-react';
+import { Home, Video, MessageCircle, User, Settings, Bot, LogOut, UserPlus } from 'lucide-react';
 import { supabase } from '../services/supabase';
 import logo from '../assets/logo.png';
 import './Sidebar.css';
@@ -19,6 +19,7 @@ export default function Sidebar({ isOpen, onClose }) {
     { path: '/messenger', icon: MessageCircle, label: 'Messenger' },
     { path: `/profile/${user?.id}`, icon: User, label: 'Profil' },
     { path: '/settings', icon: Settings, label: 'Paramètres' },
+    { path: '/invitations', icon: UserPlus, label: 'Invitations' },
   ];
 
   return (

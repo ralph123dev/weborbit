@@ -8,6 +8,8 @@ import ShortsPage from './pages/ShortsPage';
 import MessengerPage from './pages/MessengerPage';
 import ProfilePage from './pages/ProfilePage';
 import SettingsPage from './pages/SettingsPage';
+import PostEmbedPage from './pages/PostEmbedPage';
+import InvitationsPage from './pages/InvitationsPage';
 
 // Components
 import Layout from './components/Layout';
@@ -84,25 +86,32 @@ function App() {
 
   return (
     <Router>
-      {!user && <AuthModal />}
-      
+      <Toaster position="top-center" />
       {showProfileSetup && <ProfileSetupModal onClose={handleSkipSetup} />}
 
-      {user && (
-        <>
-          <Toaster position="top-center" />
-          <Layout>
-            <Routes>
-              <Route path="/" element={<FeedPage />} />
-            <Route path="/shorts" element={<ShortsPage />} />
-            <Route path="/messenger" element={<MessengerPage />} />
-            <Route path="/profile/:userId" element={<ProfilePage />} />
-            <Route path="/settings" element={<SettingsPage />} />
-            <Route path="*" element={<Navigate to="/" replace />} />
-          </Routes>
-        </Layout>
-        </>
-      )}
+      <Routes>
+        {/* Public Post Embed Page */}
+        <Route path="/post/:postId" element={<PostEmbedPage />} />
+
+        {/* Private Routes requiring Authentication */}
+        <Route path="/*" element={
+          user ? (
+            <Layout>
+              <Routes>
+                <Route path="/" element={<FeedPage />} />
+                <Route path="/shorts" element={<ShortsPage />} />
+                <Route path="/messenger" element={<MessengerPage />} />
+                <Route path="/profile/:userId" element={<ProfilePage />} />
+                <Route path="/settings" element={<SettingsPage />} />
+                <Route path="/invitations" element={<InvitationsPage />} />
+                <Route path="*" element={<Navigate to="/" replace />} />
+              </Routes>
+            </Layout>
+          ) : (
+            <AuthModal />
+          )
+        } />
+      </Routes>
     </Router>
   );
 }

@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { supabase } from '../services/supabase';
 import { useAuth } from '../hooks/useAuth';
 import { uploadToCloudinary } from '../utils/helpers';
@@ -17,6 +18,9 @@ const EMOJI_STICKERS = [
 
 export default function MessengerPage() {
   const { user } = useAuth();
+  const [searchParams] = useSearchParams();
+  const targetUserId = searchParams.get('userId');
+
   const [conversations, setConversations] = useState([]);
   const [activeChat, setActiveChat] = useState(null);
   const [messages, setMessages] = useState([]);
@@ -34,6 +38,40 @@ export default function MessengerPage() {
       fetchConversations();
     }
   }, [user]);
+
+  useEffect(() => {
+    if (user && !loading && targetUserId) {
+      const existing = conversations.find(c => c.user_id === targetUserId);
+      if (existing) {
+        openChat(existing);
+      } else {
+        const setupTempChat = async () => {
+          try {
+            const { data: targetProfile, error } = await supabase
+              .from('profiles')
+              .select('id, first_name, last_name, avatar_url, username, is_verified')
+              .eq('id', targetUserId)
+              .single();
+
+            if (error) throw error;
+            if (targetProfile) {
+              const tempChat = {
+                user_id: targetUserId,
+                profile: targetProfile,
+                last_message: '',
+                created_at: new Date().toISOString()
+              };
+              setConversations(prev => [tempChat, ...prev]);
+              openChat(tempChat);
+            }
+          } catch (e) {
+            console.error('Error setting up temporary chat:', e);
+          }
+        };
+        setupTempChat();
+      }
+    }
+  }, [user, loading, targetUserId]);
 
   useEffect(() => {
     if (activeChat) {
@@ -229,11 +267,11 @@ export default function MessengerPage() {
     return 'Utilisateur';
   };
 
-  const openChat = (conv) => {
+  function openChat(conv) {
     setActiveChat(conv);
     setShowMobileChat(true);
     setShowStickers(false);
-  };
+  }
 
   const isSingleEmoji = (text) => {
     if (!text) return false;

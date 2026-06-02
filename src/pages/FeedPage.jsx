@@ -1,12 +1,15 @@
 import { useState, useEffect, useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { supabase } from '../services/supabase';
 import { useAuth } from '../hooks/useAuth';
 import { formatTimeAgo, formatCount, uploadToCloudinary, formatTextWithLinks } from '../utils/helpers';
 import { Heart, MessageSquare, Share2, MoreHorizontal, Image as ImageIcon, X, Send, Copy, ArrowRight, ArrowLeft, MapPin, Calendar, Code } from 'lucide-react';
+import { toast } from 'react-hot-toast';
 import './FeedPage.css';
 
 export default function FeedPage() {
   const { user, profile } = useAuth();
+  const navigate = useNavigate();
   const [posts, setPosts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [newPostContent, setNewPostContent] = useState('');
@@ -37,6 +40,7 @@ export default function FeedPage() {
   const [profilePanel, setProfilePanel] = useState(null);
   const [profilePanelPosts, setProfilePanelPosts] = useState([]);
   const [profilePanelLoading, setProfilePanelLoading] = useState(false);
+  const [invitation, setInvitation] = useState(null);
 
   useEffect(() => {
     fetchPosts();
@@ -295,15 +299,38 @@ export default function FeedPage() {
   };
 
   // --- Profile Panel & Invitations ---
+  const fetchInvitationStatus = async (otherUserId) => {
+    if (!user) return;
+    try {
+      const { data, error } = await supabase
+        .from('invitations')
+        .select('*')
+        .or(`and(sender_id.eq.${user.id},receiver_id.eq.${otherUserId}),and(sender_id.eq.${otherUserId},receiver_id.eq.${user.id})`)
+        .maybeSingle();
+
+      if (error && error.code !== 'PGRST116') throw error;
+      setInvitation(data || null);
+    } catch (err) {
+      console.error('Error fetching invitation status:', err);
+      setInvitation(null);
+    }
+  };
+
   const handleSendInvitation = async () => {
     if (!user || !profilePanel) return;
     try {
-      const { error } = await supabase.from('invitations').insert({
-        sender_id: user.id,
-        receiver_id: profilePanel.id,
-        status: 'pending'
-      });
+      const { data, error } = await supabase
+        .from('invitations')
+        .insert({
+          sender_id: user.id,
+          receiver_id: profilePanel.id,
+          status: 'pending'
+        })
+        .select()
+        .single();
+        
       if (error) throw error;
+      setInvitation(data);
       
       // Also send notification
       await supabase.from('notifications').insert({
@@ -313,10 +340,27 @@ export default function FeedPage() {
         content: "vous a envoyé une invitation"
       });
       
-      alert('Invitation envoyée !');
+      toast.success('Invitation envoyée !');
     } catch (err) {
       console.error(err);
-      alert("Erreur lors de l'envoi de l'invitation");
+      toast.error("Erreur lors de l'envoi de l'invitation");
+    }
+  };
+
+  const handleCancelInvitation = async () => {
+    if (!user || !invitation) return;
+    try {
+      const { error } = await supabase
+        .from('invitations')
+        .delete()
+        .eq('id', invitation.id);
+
+      if (error) throw error;
+      setInvitation(null);
+      toast.success('Invitation annulée.');
+    } catch (err) {
+      console.error(err);
+      toast.error("Erreur lors de l'annulation de l'invitation");
     }
   };
 
@@ -325,6 +369,7 @@ export default function FeedPage() {
     setProfilePanelLoading(true);
     setProfilePanel(null);
     setProfilePanelPosts([]);
+    setInvitation(null);
     document.body.style.overflow = 'hidden';
 
     const { data: fullProfile } = await supabase
@@ -342,6 +387,9 @@ export default function FeedPage() {
 
     setProfilePanel(fullProfile);
     setProfilePanelPosts(userPosts || []);
+    
+    await fetchInvitationStatus(profileData.id);
+    
     setProfilePanelLoading(false);
   };
 
@@ -705,9 +753,27 @@ export default function FeedPage() {
           <>
             <div className="profile-panel-header">
               {profilePanel.id !== user?.id && (
-                <button className="btn btn-primary text-xs py-1 px-3 mr-auto flex items-center gap-2" onClick={handleSendInvitation}>
-                  + Inviter
-                </button>
+                <div className="mr-auto">
+                  {!invitation ? (
+                    <button className="btn btn-primary text-xs py-1 px-3 flex items-center gap-2" onClick={handleSendInvitation}>
+                      + Inviter
+                    </button>
+                  ) : invitation.status === 'pending' ? (
+                    invitation.sender_id === user.id ? (
+                      <button className="btn btn-secondary text-xs py-1 px-3 flex items-center gap-2" onClick={handleCancelInvitation}>
+                        Annuler
+                      </button>
+                    ) : (
+                      <div className="text-xs text-secondary bg-white/5 py-1 px-3 rounded-full font-bold">
+                        Invitation reçue
+                      </div>
+                    )
+                  ) : invitation.status === 'accepted' ? (
+                    <button className="btn btn-primary text-xs py-1 px-3 flex items-center gap-2" onClick={() => navigate(`/messenger?userId=${profilePanel.id}`)}>
+                      Laisser un message en privé
+                    </button>
+                  ) : null}
+                </div>
               )}
               <button className="icon-btn" onClick={handleCloseProfile}><X size={20} /></button>
             </div>
