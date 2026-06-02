@@ -23,10 +23,8 @@ export default function Sidebar({ isOpen, onClose }) {
   return (
     <aside className={`sidebar ${isOpen ? 'open' : ''}`}>
       <div className="sidebar-header">
-        <div className="logo-container">
-          <img src="/logo.png" alt="Orbit Logo" className="logo-img" onError={(e) => e.target.style.display='none'} />
-          <span className="logo-text font-black text-primary">Orbit</span>
-        </div>
+        <img src="/logo.png" alt="WebOrbit Logo" className="w-8 h-8 mr-2" />
+        <h2 className="font-black text-2xl text-primary">WebOrbit</h2>
         <button className="close-btn" onClick={onClose}>
           <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
             <line x1="18" y1="6" x2="6" y2="18"></line>

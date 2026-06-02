@@ -1,8 +1,8 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { supabase } from '../services/supabase';
 import { useAuth } from '../hooks/useAuth';
 import { formatTimeAgo, formatCount, uploadToCloudinary, formatTextWithLinks } from '../utils/helpers';
-import { Heart, MessageSquare, Share2, MoreHorizontal, Image as ImageIcon, X } from 'lucide-react';
+import { Heart, MessageSquare, Share2, MoreHorizontal, Image as ImageIcon, X, Send, Copy, ArrowRight } from 'lucide-react';
 import './FeedPage.css';
 
 export default function FeedPage() {
@@ -13,6 +13,20 @@ export default function FeedPage() {
   const [selectedImages, setSelectedImages] = useState([]);
   const [isPublishing, setIsPublishing] = useState(false);
 
+  // Comments state
+  const [activeCommentPost, setActiveCommentPost] = useState(null);
+  const [comments, setComments] = useState([]);
+  const [commentsLoading, setCommentsLoading] = useState(false);
+  const [newComment, setNewComment] = useState('');
+  const [isSubmittingComment, setIsSubmittingComment] = useState(false);
+  const [replyingTo, setReplyingTo] = useState(null);
+  const commentsEndRef = useRef(null);
+
+  // Share state
+  const [sharePost, setSharePost] = useState(null);
+  const [contacts, setContacts] = useState([]);
+  const [isCopied, setIsCopied] = useState(false);
+
   useEffect(() => {
     fetchPosts();
 
@@ -21,7 +35,6 @@ export default function FeedPage() {
       .channel('public:posts')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'posts' }, payload => {
         if (payload.eventType === 'INSERT') {
-          // Fetch the full post with profile info
           fetchSinglePost(payload.new.id);
         } else if (payload.eventType === 'UPDATE') {
           setPosts(prev => prev.map(p => p.id === payload.new.id ? { ...p, ...payload.new } : p));
@@ -85,14 +98,12 @@ export default function FeedPage() {
     
     setIsPublishing(true);
     try {
-      // 1. Upload images if any
       const uploadedImageUrls = [];
       for (const file of selectedImages) {
         const url = await uploadToCloudinary(file);
         uploadedImageUrls.push(url);
       }
 
-      // 2. Insert post
       const { error } = await supabase.from('posts').insert({
         content: newPostContent.trim(),
         user_id: user.id,
@@ -114,15 +125,114 @@ export default function FeedPage() {
 
   const handleLike = async (postId, currentLikes) => {
     if (!user) return;
-    
-    // Optimistic UI update
     setPosts(prev => prev.map(p => 
       p.id === postId ? { ...p, likes_count: (p.likes_count || 0) + 1 } : p
     ));
-
-    // Note: A full implementation would check a 'likes' table to see if the user already liked it,
-    // and toggle it. This is a simplified version incrementing the counter directly.
     await supabase.from('posts').update({ likes_count: currentLikes + 1 }).eq('id', postId);
+  };
+
+  // --- Comments Logic ---
+  const handleOpenComments = (post) => {
+    setActiveCommentPost(post);
+    setReplyingTo(null);
+    fetchComments(post.id);
+    document.body.style.overflow = 'hidden'; // Prevent background scrolling
+  };
+
+  const handleCloseComments = () => {
+    setActiveCommentPost(null);
+    setComments([]);
+    document.body.style.overflow = '';
+  };
+
+  const fetchComments = async (postId) => {
+    setCommentsLoading(true);
+    const { data } = await supabase
+      .from('comments')
+      .select('*, profiles(id, first_name, last_name, avatar_url, username)')
+      .eq('post_id', postId)
+      .order('created_at', { ascending: true });
+    
+    setComments(data || []);
+    setCommentsLoading(false);
+    setTimeout(() => {
+      commentsEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    }, 100);
+  };
+
+  const handlePostComment = async (e) => {
+    e.preventDefault();
+    if (!newComment.trim() || !activeCommentPost) return;
+    setIsSubmittingComment(true);
+    try {
+      const { data, error } = await supabase.from('comments').insert({
+        post_id: activeCommentPost.id,
+        user_id: user.id,
+        content: newComment.trim(),
+        parent_id: replyingTo?.id || null
+      }).select('*, profiles(id, first_name, last_name, avatar_url, username)').single();
+      
+      if (error) throw error;
+      
+      setComments(prev => [...prev, data]);
+      setNewComment('');
+      setReplyingTo(null);
+      
+      // Update post comment count optimistically
+      setPosts(prev => prev.map(p => 
+        p.id === activeCommentPost.id ? { ...p, comments_count: (p.comments_count || 0) + 1 } : p
+      ));
+      
+      setTimeout(() => {
+        commentsEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+      }, 100);
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setIsSubmittingComment(false);
+    }
+  };
+
+  // --- Share Logic ---
+  const fetchContacts = async () => {
+    const { data } = await supabase
+      .from('profiles')
+      .select('id, first_name, last_name, avatar_url, username')
+      .neq('id', user?.id)
+      .limit(20);
+    setContacts(data || []);
+  };
+
+  const handleOpenShare = (post) => {
+    setSharePost(post);
+    fetchContacts();
+    setIsCopied(false);
+  };
+
+  const handleCopyLink = () => {
+    const link = `${window.location.origin}/post/${sharePost.id}`;
+    navigator.clipboard.writeText(link);
+    setIsCopied(true);
+    setTimeout(() => setIsCopied(false), 2000);
+  };
+
+  const handleSendTo = async (contact) => {
+    if (!user || !sharePost) return;
+    const link = `${window.location.origin}/post/${sharePost.id}`;
+    
+    try {
+      await supabase.from('messages').insert({
+        sender_id: user.id,
+        receiver_id: contact.id,
+        content: `Regarde ce post : ${link}`,
+        is_read: false
+      });
+      alert(`Lien envoyé à ${contact.first_name || contact.username}`);
+      setSharePost(null);
+    } catch (err) {
+      console.error(err);
+      alert("Erreur lors de l'envoi");
+    }
   };
 
   return (
@@ -242,16 +352,15 @@ export default function FeedPage() {
                   {post.image_urls && post.image_urls.length > 0 ? (
                     <div className="post-images">
                       {post.image_urls.map((img, idx) => (
-                        <img key={idx} src={img} alt="Post" className="post-image" loading="lazy" />
+                        <img key={idx} src={img} alt="Post" className="post-image" loading="lazy" onClick={() => window.open(img, '_blank')} />
                       ))}
                     </div>
                   ) : post.image_url ? (
                     <div className="post-images">
-                       <img src={post.image_url} alt="Post" className="post-image" loading="lazy" />
+                       <img src={post.image_url} alt="Post" className="post-image" loading="lazy" onClick={() => window.open(post.image_url, '_blank')} />
                     </div>
                   ) : null}
                   
-                  {/* Note: Audio posts from mobile might have audio_url */}
                   {post.audio_url && (
                     <div className="post-audio">
                       <audio controls src={post.audio_url} className="w-full mt-2" />
@@ -264,11 +373,11 @@ export default function FeedPage() {
                     <Heart size={20} />
                     <span>{formatCount(post.likes_count)}</span>
                   </button>
-                  <button className="post-action-btn">
+                  <button className="post-action-btn" onClick={() => handleOpenComments(post)}>
                     <MessageSquare size={20} />
                     <span>{formatCount(post.comments_count)}</span>
                   </button>
-                  <button className="post-action-btn">
+                  <button className="post-action-btn" onClick={() => handleOpenShare(post)}>
                     <Share2 size={20} />
                   </button>
                 </div>
@@ -277,6 +386,109 @@ export default function FeedPage() {
           )}
         </div>
       </div>
+
+      {/* Share Modal */}
+      {sharePost && (
+        <div className="modal-overlay">
+          <div className="share-modal glass">
+            <div className="share-header">
+              <h3 className="font-bold text-lg">Partager</h3>
+              <button className="icon-btn" onClick={() => setSharePost(null)}><X size={20} /></button>
+            </div>
+            
+            <div className="share-body">
+              <button className="share-copy-btn" onClick={handleCopyLink}>
+                <div className="share-icon-circle"><Copy size={20} color="white" /></div>
+                <span>{isCopied ? 'Lien copié !' : 'Copier le lien'}</span>
+              </button>
+
+              <div className="share-divider">ou envoyer à</div>
+
+              <div className="share-contacts">
+                {contacts.map(contact => (
+                  <div key={contact.id} className="share-contact-item" onClick={() => handleSendTo(contact)}>
+                    <img src={contact.avatar_url || 'https://via.placeholder.com/40'} alt="Avatar" className="avatar" />
+                    <div className="contact-info">
+                      <div className="font-bold text-sm">{contact.first_name} {contact.last_name}</div>
+                      <div className="text-xs text-secondary">@{contact.username}</div>
+                    </div>
+                    <button className="send-circle-btn"><ArrowRight size={16} /></button>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Comments Side Navigation Panel */}
+      <div className={`comments-panel ${activeCommentPost ? 'open' : ''}`}>
+        <div className="comments-header glass">
+          <h3 className="font-bold text-lg">Commentaires</h3>
+          <button className="icon-btn" onClick={handleCloseComments}><X size={20} /></button>
+        </div>
+        
+        <div className="comments-body">
+          {commentsLoading ? (
+            <div className="text-center p-4 text-secondary">Chargement...</div>
+          ) : comments.length === 0 ? (
+            <div className="text-center p-8 text-secondary">
+              Soyez le premier à commenter !
+            </div>
+          ) : (
+            comments.map(comment => (
+              <div key={comment.id} className="comment-item">
+                <img src={comment.profiles?.avatar_url || 'https://via.placeholder.com/40'} alt="Avatar" className="avatar" />
+                <div className="comment-content">
+                  <div className="comment-meta">
+                    <span className="font-bold text-sm">{comment.profiles?.first_name} {comment.profiles?.last_name}</span>
+                    <span className="text-xs text-secondary ml-2">{formatTimeAgo(comment.created_at)}</span>
+                  </div>
+                  {comment.parent_id && (
+                    <div className="reply-indicator text-xs text-primary mb-1">En réponse</div>
+                  )}
+                  <div className="comment-text text-sm">
+                    {comment.content}
+                  </div>
+                  <button 
+                    className="reply-btn text-xs text-secondary font-bold mt-1"
+                    onClick={() => setReplyingTo(comment)}
+                  >
+                    Répondre
+                  </button>
+                </div>
+              </div>
+            ))
+          )}
+          <div ref={commentsEndRef} />
+        </div>
+
+        <div className="comments-footer glass">
+          {replyingTo && (
+            <div className="replying-to-banner">
+              <span className="text-xs">En réponse à <span className="font-bold">{replyingTo.profiles?.first_name}</span></span>
+              <button onClick={() => setReplyingTo(null)}><X size={14} /></button>
+            </div>
+          )}
+          <form className="comment-input-area" onSubmit={handlePostComment}>
+            <input 
+              type="text" 
+              placeholder="Écrivez un commentaire..."
+              className="comment-input"
+              value={newComment}
+              onChange={(e) => setNewComment(e.target.value)}
+            />
+            <button type="submit" className="send-comment-btn" disabled={!newComment.trim() || isSubmittingComment}>
+              <Send size={18} />
+            </button>
+          </form>
+        </div>
+      </div>
+      
+      {/* Overlay to close comments when clicking outside on mobile */}
+      {activeCommentPost && (
+        <div className="comments-overlay" onClick={handleCloseComments}></div>
+      )}
     </div>
   );
 }
