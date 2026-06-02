@@ -559,33 +559,40 @@ export default function MessengerPage() {
             )}
 
             <form className="chat-input-area glass" onSubmit={handleSendMessage}>
-              <button type="button" className="icon-btn text-secondary" onClick={() => setShowStickers(!showStickers)}>
-                <Smile size={24} />
-              </button>
-              <label className="icon-btn text-secondary cursor-pointer">
-                <ImageIcon size={24} />
-                <input 
-                  ref={fileInputRef}
-                  type="file" 
-                  accept="image/*" 
-                  style={{ display: 'none' }} 
-                  onChange={handleSendImage}
-                />
-              </label>
-              <input 
-                type="text" 
-                className="chat-input" 
-                placeholder="Écrivez un message..." 
-                value={newMessage}
-                onChange={(e) => setNewMessage(e.target.value)}
-              />
-              <button 
-                type="submit" 
-                className="send-btn"
-                disabled={!newMessage.trim()}
-              >
-                <Send size={20} />
-              </button>
+                <div className="input-left-icons">
+                  <button type="button" className="icon-btn text-secondary emoji-toggle" onClick={() => setShowStickers(!showStickers)}>
+                    <Smile size={20} />
+                  </button>
+                  <label className="icon-btn text-secondary attach-btn cursor-pointer">
+                    <ImageIcon size={18} />
+                    <input 
+                      ref={fileInputRef}
+                      type="file" 
+                      accept="image/*" 
+                      style={{ display: 'none' }} 
+                      onChange={handleSendImage}
+                    />
+                  </label>
+                </div>
+
+                <div className="chat-input-wrap">
+                  <input 
+                    type="text" 
+                    className="chat-input" 
+                    placeholder="Écrivez un message..." 
+                    value={newMessage}
+                    onChange={(e) => setNewMessage(e.target.value)}
+                  />
+                </div>
+
+                {newMessage.trim() && (
+                  <button 
+                    type="submit" 
+                    className="send-btn"
+                  >
+                    <Send size={18} />
+                  </button>
+                )}
             </form>
           </>
         ) : (
