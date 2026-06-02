@@ -1,5 +1,7 @@
 import { useState } from 'react';
 import { supabase } from '../services/supabase';
+import { Turnstile } from '@marsidev/react-turnstile';
+import logo from '../assets/logo.png';
 import './AuthModal.css';
 
 export default function AuthModal() {
@@ -10,6 +12,7 @@ export default function AuthModal() {
   const [lastName, setLastName] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  const [turnstileToken, setTurnstileToken] = useState(null);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -24,6 +27,10 @@ export default function AuthModal() {
         });
         if (error) throw error;
       } else {
+        if (!turnstileToken) {
+          throw new Error('Veuillez valider le captcha pour continuer.');
+        }
+
         const { data, error } = await supabase.auth.signUp({
           email,
           password,
@@ -59,8 +66,8 @@ export default function AuthModal() {
   return (
     <div className="auth-overlay">
       <div className="auth-modal glass">
-        <div className="auth-header">
-          <img src="/logo.png" alt="Orbit Logo" className="auth-logo" onError={(e) => e.target.style.display='none'} />
+        <div className="auth-header flex flex-col items-center">
+          <img src={logo} alt="Orbit Logo" className="auth-logo" style={{ width: '120px', height: 'auto', marginBottom: '1rem' }} />
           <h2 className="font-black text-primary">Bienvenue sur Orbit</h2>
           <p className="text-secondary">
             {isLogin ? 'Connectez-vous pour continuer' : 'Créez un compte pour nous rejoindre'}
@@ -118,7 +125,17 @@ export default function AuthModal() {
             />
           </div>
 
-          <button type="submit" className="btn btn-primary auth-submit" disabled={loading}>
+          {!isLogin && (
+            <div className="flex justify-center my-4">
+              <Turnstile 
+                siteKey={import.meta.env.VITE_TURNSTILE_SITE_KEY || '0x4AAAAAADdYECWgRvvjBv1E'} 
+                onSuccess={(token) => setTurnstileToken(token)}
+                options={{ theme: 'auto' }}
+              />
+            </div>
+          )}
+
+          <button type="submit" className="btn btn-primary auth-submit" disabled={loading || (!isLogin && !turnstileToken)}>
             {loading ? <div className="spinner"></div> : (isLogin ? 'Se connecter' : "S'inscrire")}
           </button>
         </form>
@@ -132,6 +149,7 @@ export default function AuthModal() {
               onClick={() => {
                 setIsLogin(!isLogin);
                 setError(null);
+                setTurnstileToken(null);
               }}
             >
               {isLogin ? "S'inscrire" : "Se connecter"}
