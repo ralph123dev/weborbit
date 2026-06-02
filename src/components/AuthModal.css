@@ -2,7 +2,7 @@
   position: fixed;
   inset: 0;
   background-color: rgba(0, 0, 0, 0.6);
-  backdrop-filter: blur(8px);
+  backdrop-filter: blur(5px);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -12,55 +12,46 @@
 
 .auth-modal {
   width: 100%;
-  max-width: 440px;
+  max-width: 450px;
+  padding: 2.5rem;
   border-radius: var(--radius-lg);
-  padding: 2.5rem 2rem;
-  box-shadow: var(--shadow-lg);
-  animation: slideUp var(--transition-normal);
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+  background-color: var(--bg-color-alt);
+  position: relative;
+  overflow: hidden;
+  animation: modalPopIn 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
 }
 
-@keyframes slideUp {
+@keyframes modalPopIn {
   from {
     opacity: 0;
-    transform: translateY(20px);
+    transform: scale(0.9) translateY(20px);
   }
   to {
     opacity: 1;
-    transform: translateY(0);
+    transform: scale(1) translateY(0);
   }
 }
 
 .auth-header {
-  text-align: center;
   margin-bottom: 2rem;
 }
 
-.auth-logo {
-  width: 64px;
-  height: 64px;
-  object-fit: contain;
-  margin-bottom: 1rem;
-}
-
-.auth-header h2 {
-  font-size: 1.75rem;
-  margin-bottom: 0.5rem;
-}
-
 .auth-error {
-  background-color: rgba(255, 45, 85, 0.1);
-  color: var(--secondary-color);
-  padding: 0.75rem 1rem;
+  background-color: rgba(255, 59, 48, 0.1);
+  color: #ff3b30;
+  padding: 1rem;
   border-radius: var(--radius-sm);
   margin-bottom: 1.5rem;
-  font-size: 0.875rem;
-  border: 1px solid rgba(255, 45, 85, 0.2);
+  font-size: 0.9rem;
+  text-align: center;
+  border: 1px solid rgba(255, 59, 48, 0.3);
 }
 
 .auth-form {
   display: flex;
   flex-direction: column;
-  gap: 1.25rem;
+  gap: 1.5rem;
 }
 
 .input-group {
@@ -70,57 +61,117 @@
 }
 
 .input-group label {
-  font-size: 0.875rem;
   font-weight: 600;
+  font-size: 0.9rem;
   color: var(--text-secondary);
 }
 
 .input-group input {
   padding: 0.875rem 1rem;
-  border-radius: var(--radius-sm);
-  border: 1px solid var(--border-color);
-  background-color: var(--bg-color);
+  border-radius: var(--radius-md);
+  border: 2px solid var(--border-color);
+  background-color: var(--surface);
   color: var(--text-primary);
   font-size: 1rem;
   transition: all var(--transition-fast);
 }
 
 .input-group input:focus {
+  outline: none;
   border-color: var(--primary-color);
-  box-shadow: 0 0 0 2px rgba(106, 90, 255, 0.2);
+  box-shadow: 0 0 0 4px rgba(106, 90, 255, 0.1);
 }
 
-.auth-submit {
-  margin-top: 0.5rem;
-  height: 48px;
-  font-size: 1rem;
+/* Wizard Styles */
+.auth-wizard {
+  position: relative;
+  width: 100%;
 }
 
-.spinner {
-  width: 20px;
-  height: 20px;
-  border: 2px solid rgba(255,255,255,0.3);
-  border-radius: 50%;
-  border-top-color: white;
-  animation: spin 0.8s linear infinite;
+.wizard-progress {
+  display: flex;
+  justify-content: center;
+  gap: 0.5rem;
+  margin-bottom: 2rem;
 }
 
-@keyframes spin {
-  to { transform: rotate(360deg); }
+.progress-dot {
+  width: 30px;
+  height: 6px;
+  border-radius: 3px;
+  background-color: var(--surface-hover);
+  transition: all 0.4s ease;
+}
+
+.progress-dot.active {
+  background-color: var(--primary-color);
+}
+
+.wizard-step-container {
+  display: flex;
+  flex-direction: column;
+  min-height: 250px; /* Keep height stable during transitions */
+}
+
+/* Animations */
+.fade-in {
+  animation: fadeIn 0.3s ease-in-out;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.slide-right {
+  animation: slideRight 0.4s cubic-bezier(0.25, 1, 0.5, 1);
+}
+
+@keyframes slideRight {
+  from {
+    opacity: 0;
+    transform: translateX(30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+.slide-left {
+  animation: slideLeft 0.4s cubic-bezier(0.25, 1, 0.5, 1);
+}
+
+@keyframes slideLeft {
+  from {
+    opacity: 0;
+    transform: translateX(-30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+.turnstile-wrapper {
+  min-height: 65px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.submit-pulse:not(:disabled) {
+  animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+  0% { box-shadow: 0 0 0 0 rgba(106, 90, 255, 0.7); }
+  70% { box-shadow: 0 0 0 10px rgba(106, 90, 255, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(106, 90, 255, 0); }
 }
 
 .auth-footer {
-  margin-top: 2rem;
   text-align: center;
-  font-size: 0.875rem;
-  color: var(--text-secondary);
-}
-
-.toggle-auth-btn {
-  background: none;
-  margin-left: 0.5rem;
-}
-
-.toggle-auth-btn:hover {
-  text-decoration: underline;
+  border-top: 1px solid var(--border-color);
+  padding-top: 1.5rem;
 }
