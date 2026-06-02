@@ -6,7 +6,8 @@ export default function AuthModal() {
   const [isLogin, setIsLogin] = useState(true);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [nom, setNom] = useState('');
+  const [firstName, setFirstName] = useState('');
+  const [lastName, setLastName] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
@@ -28,7 +29,8 @@ export default function AuthModal() {
           password,
           options: {
             data: {
-              nom: nom || email.split('@')[0],
+              first_name: firstName || email.split('@')[0],
+              last_name: lastName || ''
             }
           }
         });
@@ -36,11 +38,13 @@ export default function AuthModal() {
         
         // Also add profile immediately
         if (data?.user) {
+          const baseName = firstName || data.user.email.split('@')[0];
           await supabase.from('profiles').upsert({
             id: data.user.id,
             email: data.user.email,
-            nom: nom || data.user.email.split('@')[0],
-            username: (nom || data.user.email.split('@')[0]).replace(/\s+/g, '').toLowerCase() + Math.floor(Math.random() * 1000),
+            first_name: firstName || data.user.email.split('@')[0],
+            last_name: lastName || '',
+            username: baseName.replace(/\s+/g, '').toLowerCase() + Math.floor(Math.random() * 1000),
             updated_at: new Date().toISOString()
           });
         }
@@ -68,13 +72,25 @@ export default function AuthModal() {
         <form onSubmit={handleSubmit} className="auth-form">
           {!isLogin && (
             <div className="input-group">
-              <label>Nom complet</label>
+              <label>Prénom</label>
               <input 
                 type="text" 
-                value={nom}
-                onChange={(e) => setNom(e.target.value)}
-                placeholder="Votre nom"
+                value={firstName}
+                onChange={(e) => setFirstName(e.target.value)}
+                placeholder="Votre prénom"
                 required={!isLogin}
+              />
+            </div>
+          )}
+
+          {!isLogin && (
+            <div className="input-group">
+              <label>Nom</label>
+              <input 
+                type="text" 
+                value={lastName}
+                onChange={(e) => setLastName(e.target.value)}
+                placeholder="Votre nom"
               />
             </div>
           )}

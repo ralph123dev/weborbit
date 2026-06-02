@@ -31,3 +31,34 @@ export function isOnline(lastSeen) {
   const seen = new Date(lastSeen);
   return (now - seen) < 120000; // 2 minutes
 }
+
+export async function uploadToCloudinary(file) {
+  const formData = new FormData();
+  formData.append('file', file);
+  formData.append('upload_preset', import.meta.env.VITE_CLOUDINARY_UPLOAD_PRESET);
+
+  const res = await fetch(
+    `https://api.cloudinary.com/v1_1/${import.meta.env.VITE_CLOUDINARY_CLOUD_NAME}/image/upload`,
+    {
+      method: 'POST',
+      body: formData,
+    }
+  );
+  
+  if (!res.ok) throw new Error('Erreur lors du téléchargement de l\'image');
+  const data = await res.json();
+  return data.secure_url;
+}
+
+export function formatTextWithLinks(text) {
+  if (!text) return text;
+  
+  // Linkify URLs and Hashtags
+  const urlRegex = /(https?:\/\/[^\s]+)/g;
+  const hashtagRegex = /(#[a-zA-Z0-9_]+)/g;
+  
+  let formatted = text.replace(urlRegex, '<a href="$1" target="_blank" rel="noopener noreferrer" class="text-primary hover:underline">$1</a>');
+  formatted = formatted.replace(hashtagRegex, '<span class="text-primary cursor-pointer hover:underline">$1</span>');
+  
+  return formatted;
+}

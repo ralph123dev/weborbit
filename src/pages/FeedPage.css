@@ -1,0 +1,273 @@
+/* (Previous FeedPage.css content + additions) */
+.feed-page {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.feed-header {
+  padding: 1.5rem;
+  border-bottom: 1px solid var(--border-color);
+  position: sticky;
+  top: 0;
+  background-color: var(--bg-color-alt);
+  z-index: 10;
+  backdrop-filter: blur(8px);
+  background-color: rgba(var(--bg-color-alt-rgb), 0.8);
+}
+
+.feed-content {
+  padding: 1.5rem;
+  max-width: 680px;
+  margin: 0 auto;
+  width: 100%;
+}
+
+.composer {
+  padding: 1rem;
+  border-radius: var(--radius-lg);
+  margin-bottom: 1.5rem;
+}
+
+.composer-input-area {
+  display: flex;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.avatar {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  object-fit: cover;
+  background-color: var(--surface-hover);
+}
+
+.composer-textarea {
+  flex: 1;
+  background: transparent;
+  border: none;
+  resize: none;
+  color: var(--text-primary);
+  font-size: 1.125rem;
+  padding-top: 0.5rem;
+  min-height: 60px;
+}
+
+.composer-textarea:focus {
+  outline: none;
+}
+
+.composer-actions {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-top: 1px solid var(--border-color);
+  padding-top: 1rem;
+}
+
+.composer-tools {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.composer-tool-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  transition: background-color var(--transition-fast);
+  color: var(--primary-color);
+}
+
+.composer-tool-btn:hover {
+  background-color: rgba(106, 90, 255, 0.1);
+}
+
+.composer-preview-images {
+  display: flex;
+  gap: 0.5rem;
+  padding: 0.5rem 0;
+  overflow-x: auto;
+  flex-wrap: wrap;
+}
+
+.preview-image-wrapper {
+  position: relative;
+  width: 80px;
+  height: 80px;
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+  flex-shrink: 0;
+}
+
+.preview-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.remove-img-btn {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  background-color: rgba(0, 0, 0, 0.6);
+  color: white;
+  border-radius: 50%;
+  width: 22px;
+  height: 22px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background-color var(--transition-fast);
+}
+
+.remove-img-btn:hover {
+  background-color: rgba(255, 45, 85, 0.8);
+}
+
+/* Links & hashtags in posts */
+.post-text a {
+  color: var(--primary-color);
+  text-decoration: none;
+}
+
+.post-text a:hover {
+  text-decoration: underline;
+}
+
+.post-text .text-primary {
+  color: var(--primary-color);
+}
+
+.cursor-pointer {
+  cursor: pointer;
+}
+
+.hover\\:underline:hover {
+  text-decoration: underline;
+}
+
+.posts-container {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.post-card {
+  padding: 1.5rem;
+  border-radius: var(--radius-lg);
+  transition: transform var(--transition-fast);
+}
+
+.post-header {
+  display: flex;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.post-meta {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  flex: 1;
+}
+
+.post-author-name {
+  font-size: 1rem;
+}
+
+.post-time {
+  font-size: 0.875rem;
+}
+
+.post-options-btn {
+  background: transparent;
+  color: var(--text-secondary);
+  padding: 0.5rem;
+  border-radius: 50%;
+}
+
+.post-options-btn:hover {
+  background-color: var(--surface-hover);
+  color: var(--text-primary);
+}
+
+.post-text {
+  font-size: 1rem;
+  line-height: 1.5;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.post-images {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 0.5rem;
+  margin-top: 1rem;
+  border-radius: var(--radius-md);
+  overflow: hidden;
+}
+
+.post-image {
+  width: 100%;
+  height: auto;
+  max-height: 400px;
+  object-fit: cover;
+  border-radius: var(--radius-sm);
+}
+
+.post-audio {
+  margin-top: 1rem;
+  background-color: var(--surface);
+  padding: 0.5rem;
+  border-radius: var(--radius-full);
+}
+
+.post-audio audio {
+  width: 100%;
+  height: 40px;
+  outline: none;
+}
+
+.post-actions {
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+  margin-top: 1.5rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--border-color);
+}
+
+.post-action-btn {
+  background: transparent;
+  color: var(--text-secondary);
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+  transition: color var(--transition-fast);
+}
+
+.post-action-btn:hover {
+  color: var(--primary-color);
+}
+
+.post-action-btn:hover svg {
+  transform: scale(1.1);
+  transition: transform var(--transition-fast);
+}
+
+/* Skeletons */
+.line {
+  height: 12px;
+  border-radius: 4px;
+}
+.line.short { width: 40%; }
+.line.very-short { width: 20%; }
+.line.medium { width: 70%; }

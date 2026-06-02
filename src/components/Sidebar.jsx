@@ -63,11 +63,11 @@ export default function Sidebar({ isOpen, onClose }) {
           <div className="user-mini-profile">
             <img 
               src={profile.avatar_url || 'https://via.placeholder.com/40'} 
-              alt={profile.nom || 'User'} 
+              alt={profile.first_name || 'User'} 
               className="user-avatar"
             />
             <div className="user-info">
-              <div className="user-name font-bold">{profile.nom || 'Utilisateur'}</div>
+              <div className="user-name font-bold">{profile.first_name} {profile.last_name}</div>
               <div className="user-handle text-secondary">@{profile.username || 'user'}</div>
             </div>
           </div>
