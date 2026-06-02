@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { supabase } from '../services/supabase';
 import { useAuth } from '../hooks/useAuth';
 import { formatTimeAgo, formatCount, uploadToCloudinary, formatTextWithLinks } from '../utils/helpers';
-import { Heart, MessageSquare, Share2, MoreHorizontal, Image as ImageIcon, X, Send, Copy, ArrowRight, ArrowLeft, MapPin, Calendar } from 'lucide-react';
+import { Heart, MessageSquare, Share2, MoreHorizontal, Image as ImageIcon, X, Send, Copy, ArrowRight, ArrowLeft, MapPin, Calendar, Code } from 'lucide-react';
 import './FeedPage.css';
 
 export default function FeedPage() {
@@ -29,8 +29,9 @@ export default function FeedPage() {
 
   // Share state
   const [sharePost, setSharePost] = useState(null);
-  const [contacts, setContacts] = useState([]);
   const [isCopied, setIsCopied] = useState(false);
+  const [embedPost, setEmbedPost] = useState(null);
+  const [isEmbedCopied, setIsEmbedCopied] = useState(false);
 
   // User Profile Panel state
   const [profilePanel, setProfilePanel] = useState(null);
@@ -263,19 +264,11 @@ export default function FeedPage() {
   };
 
   // --- Share Logic ---
-  const fetchContacts = async () => {
-    const { data } = await supabase
-      .from('profiles')
-      .select('id, first_name, last_name, avatar_url, username')
-      .neq('id', user?.id)
-      .limit(20);
-    setContacts(data || []);
-  };
-
   const handleOpenShare = (post) => {
     setSharePost(post);
-    fetchContacts();
     setIsCopied(false);
+    setEmbedPost(null);
+    setIsEmbedCopied(false);
   };
 
   const handleCopyLink = () => {
@@ -285,23 +278,20 @@ export default function FeedPage() {
     setTimeout(() => setIsCopied(false), 2000);
   };
 
-  const handleSendTo = async (contact) => {
-    if (!user || !sharePost) return;
-    const link = `${window.location.origin}/post/${sharePost.id}`;
-    
-    try {
-      await supabase.from('messages').insert({
-        sender_id: user.id,
-        receiver_id: contact.id,
-        content: `Regarde ce post : ${link}`,
-        is_read: false
-      });
-      alert(`Lien envoyé à ${contact.first_name || contact.username}`);
-      setSharePost(null);
-    } catch (err) {
-      console.error(err);
-      alert("Erreur lors de l'envoi");
-    }
+  const handleShowEmbed = () => {
+    setEmbedPost(sharePost);
+  };
+
+  const getEmbedCode = (post) => {
+    const link = `${window.location.origin}/post/${post.id}`;
+    return `<iframe src="${link}" width="100%" height="400" style="border:none;border-radius:12px;" allowfullscreen></iframe>`;
+  };
+
+  const handleCopyEmbed = () => {
+    if (!embedPost) return;
+    navigator.clipboard.writeText(getEmbedCode(embedPost));
+    setIsEmbedCopied(true);
+    setTimeout(() => setIsEmbedCopied(false), 2000);
   };
 
   // --- Profile Panel & Invitations ---
@@ -550,17 +540,42 @@ export default function FeedPage() {
 
       {/* Edit Post Modal */}
       {editingPost && (
-        <div className="modal-overlay">
-          <div className="glass p-6 rounded-2xl w-full max-w-lg relative">
-            <h3 className="font-bold text-xl mb-4">Modifier le post</h3>
-            <textarea 
-              className="w-full bg-transparent border border-white/20 p-4 rounded-xl min-h-[150px] mb-4 text-primary resize-none focus:outline-none focus:border-primary"
-              value={editContent}
-              onChange={(e) => setEditContent(e.target.value)}
-            />
-            <div className="flex justify-end gap-3">
+        <div className="modal-overlay" onClick={() => setEditingPost(null)}>
+          <div className="edit-modal glass" onClick={(e) => e.stopPropagation()}>
+            <div className="edit-modal-header">
+              <h3 className="font-bold text-lg">✏️ Modifier la publication</h3>
+              <button className="icon-btn" onClick={() => setEditingPost(null)}><X size={20} /></button>
+            </div>
+            <div className="edit-modal-body">
+              <div className="edit-modal-author">
+                <img 
+                  src={editingPost.profiles?.avatar_url || profile?.avatar_url || 'https://via.placeholder.com/40'}
+                  alt="Avatar"
+                  className="avatar"
+                />
+                <div>
+                  <div className="font-bold text-sm">{editingPost.profiles?.first_name || profile?.first_name} {editingPost.profiles?.last_name || profile?.last_name}</div>
+                  <div className="text-xs text-secondary">Modification en cours...</div>
+                </div>
+              </div>
+              <textarea 
+                className="edit-modal-textarea"
+                value={editContent}
+                onChange={(e) => setEditContent(e.target.value)}
+                placeholder="Que souhaitez-vous dire ?"
+                autoFocus
+              />
+              {editingPost.image_urls?.length > 0 && (
+                <div className="edit-modal-images">
+                  {editingPost.image_urls.map((img, idx) => (
+                    <img key={idx} src={img} alt="Post" className="edit-modal-img" />
+                  ))}
+                </div>
+              )}
+            </div>
+            <div className="edit-modal-footer">
               <button className="btn btn-outline" onClick={() => setEditingPost(null)}>Annuler</button>
-              <button className="btn btn-primary" onClick={handleEditPost}>Enregistrer</button>
+              <button className="btn btn-primary" onClick={handleEditPost} disabled={!editContent.trim()}>Enregistrer</button>
             </div>
           </div>
         </div>
@@ -568,33 +583,41 @@ export default function FeedPage() {
 
       {/* Share Modal */}
       {sharePost && (
-        <div className="modal-overlay">
-          <div className="share-modal glass">
+        <div className="modal-overlay" onClick={() => { setSharePost(null); setEmbedPost(null); }}>
+          <div className="share-modal glass" onClick={(e) => e.stopPropagation()}>
             <div className="share-header">
-              <h3 className="font-bold text-lg">Partager</h3>
-              <button className="icon-btn" onClick={() => setSharePost(null)}><X size={20} /></button>
+              <h3 className="font-bold text-lg">🔗 Partager</h3>
+              <button className="icon-btn" onClick={() => { setSharePost(null); setEmbedPost(null); }}><X size={20} /></button>
             </div>
             
             <div className="share-body">
-              <button className="share-copy-btn" onClick={handleCopyLink}>
+              <button className="share-action-btn" onClick={handleCopyLink}>
                 <div className="share-icon-circle"><Copy size={20} color="white" /></div>
-                <span>{isCopied ? 'Lien copié !' : 'Copier le lien'}</span>
+                <div className="share-action-text">
+                  <span className="font-bold">{isCopied ? '✅ Lien copié !' : 'Copier le lien'}</span>
+                  <span className="text-xs text-secondary">Partagez ce post avec un lien direct</span>
+                </div>
               </button>
 
-              <div className="share-divider">ou envoyer à</div>
+              <button className="share-action-btn" onClick={handleShowEmbed}>
+                <div className="share-icon-circle embed-icon"><Code size={20} color="white" /></div>
+                <div className="share-action-text">
+                  <span className="font-bold">Intégrer</span>
+                  <span className="text-xs text-secondary">Obtenez le code embed pour votre site</span>
+                </div>
+              </button>
 
-              <div className="share-contacts">
-                {contacts.map(contact => (
-                  <div key={contact.id} className="share-contact-item" onClick={() => handleSendTo(contact)}>
-                    <img src={contact.avatar_url || 'https://via.placeholder.com/40'} alt="Avatar" className="avatar" />
-                    <div className="contact-info">
-                      <div className="font-bold text-sm">{contact.first_name} {contact.last_name}</div>
-                      <div className="text-xs text-secondary">@{contact.username}</div>
-                    </div>
-                    <button className="send-circle-btn"><ArrowRight size={16} /></button>
-                  </div>
-                ))}
-              </div>
+              {embedPost && (
+                <div className="embed-code-section">
+                  <div className="embed-label">Code d'intégration HTML :</div>
+                  <pre className="embed-code-block">
+                    <code>{getEmbedCode(embedPost)}</code>
+                  </pre>
+                  <button className="btn btn-primary btn-sm" onClick={handleCopyEmbed}>
+                    {isEmbedCopied ? '✅ Code copié !' : '📋 Copier le code'}
+                  </button>
+                </div>
+              )}
             </div>
           </div>
         </div>
