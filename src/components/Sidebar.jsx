@@ -1,9 +1,9 @@
-import { useState, useEffect } from 'react';
+import { Download, Home, LogOut, MessageCircle, Settings, User, UserPlus, Video } from 'lucide-react';
+import { useEffect, useState } from 'react';
 import { NavLink } from 'react-router-dom';
-import { useAuth } from '../hooks/useAuth';
-import { Home, Video, MessageCircle, User, Settings, Bot, LogOut, UserPlus } from 'lucide-react';
-import { supabase } from '../services/supabase';
 import logo from '../assets/logo.png';
+import { useAuth } from '../hooks/useAuth';
+import { supabase } from '../services/supabase';
 import './Sidebar.css';
 
 export default function Sidebar({ isOpen, onClose }) {
@@ -18,7 +18,15 @@ export default function Sidebar({ isOpen, onClose }) {
     const channel = supabase
       .channel('unread-messages-sidebar')
       .on('postgres_changes', {
-        event: '*',
+        event: 'INSERT',
+        schema: 'public',
+        table: 'messages',
+        filter: `receiver_id=eq.${user.id}`
+      }, () => {
+        fetchUnreadCount();
+      })
+      .on('postgres_changes', {
+        event: 'UPDATE',
         schema: 'public',
         table: 'messages',
         filter: `receiver_id=eq.${user.id}`
@@ -53,6 +61,15 @@ export default function Sidebar({ isOpen, onClose }) {
     window.location.reload();
   };
 
+  const handleDownloadAPK = () => {
+    const link = document.createElement('a');
+    link.href = 'https://expo.dev/artifacts/eas/kHog5triepqpC5gjU1Ln2J.apk';
+    link.download = 'OrbitPost.apk';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
   const navItems = [
     { path: '/', icon: Home, label: 'Accueil' },
     { path: '/shorts', icon: Video, label: 'Shorts' },
@@ -84,19 +101,21 @@ export default function Sidebar({ isOpen, onClose }) {
               if (window.innerWidth <= 768) onClose();
             }}
           >
-            <item.icon className="nav-icon" size={24} />
+            <div className="nav-item-wrapper">
+              <item.icon className="nav-icon" size={24} />
+              {item.label === 'Messenger' && unreadCount > 0 && (
+                <span className="sidebar-dot-badge"></span>
+              )}
+            </div>
             <span className="nav-label">{item.label}</span>
-            {item.label === 'Messenger' && unreadCount > 0 && (
-              <span className="sidebar-badge">{unreadCount}</span>
-            )}
           </NavLink>
         ))}
 
         <div className="nav-divider"></div>
         
-        <button className="nav-item orbit-ia-btn">
-          <Bot className="nav-icon text-primary" size={24} />
-          <span className="nav-label font-bold text-primary">Orbit IA</span>
+        <button className="nav-item download-mobile-btn" onClick={handleDownloadAPK}>
+          <Download className="nav-icon text-primary" size={24} />
+          <span className="nav-label font-bold text-primary">Télécharger APK</span>
         </button>
       </nav>
 

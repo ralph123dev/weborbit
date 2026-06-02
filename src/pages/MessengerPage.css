@@ -452,3 +452,47 @@
   border-left: 4px solid var(--primary-color);
   background: rgba(106, 90, 255, 0.1);
 }
+
+/* Swipe to Reply Styles */
+.message-content {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  cursor: grab;
+  user-select: none;
+}
+
+.message-content:active {
+  cursor: grabbing;
+}
+
+.swipe-reply-indicator {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--primary-color);
+  white-space: nowrap;
+  opacity: 0;
+  animation: fadeInScale 0.3s ease forwards;
+}
+
+.swipe-reply-indicator.left {
+  right: 8px;
+}
+
+.swipe-reply-indicator.right {
+  left: 8px;
+}
+
+@keyframes fadeInScale {
+  from {
+    opacity: 0;
+    transform: translateY(-50%) scale(0.8);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(-50%) scale(1);
+  }
+}

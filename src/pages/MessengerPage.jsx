@@ -1,10 +1,9 @@
-import { useState, useEffect, useRef } from 'react';
+import { ArrowLeft, Image as ImageIcon, MoreVertical, Send, Smile, X } from 'lucide-react';
+import { useEffect, useRef, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { supabase } from '../services/supabase';
 import { useAuth } from '../hooks/useAuth';
-import { uploadToCloudinary } from '../utils/helpers';
-import { Send, Image as ImageIcon, Smile, MoreVertical, ArrowLeft, X } from 'lucide-react';
-import { formatTimeAgo } from '../utils/helpers';
+import { supabase } from '../services/supabase';
+import { formatTimeAgo, uploadToCloudinary } from '../utils/helpers';
 import './MessengerPage.css';
 
 const EMOJI_STICKERS = [
@@ -30,8 +29,11 @@ export default function MessengerPage() {
   const [showStickers, setShowStickers] = useState(false);
   const [showMobileChat, setShowMobileChat] = useState(false);
   const [replyTo, setReplyTo] = useState(null);
+  const [swiping, setSwiping] = useState(null);
+  const [swipeOffset, setSwipeOffset] = useState({});
   const messagesEndRef = useRef(null);
   const fileInputRef = useRef(null);
+  const swipeStartRef = useRef({});
 
   useEffect(() => {
     if (user) {
@@ -169,6 +171,17 @@ export default function MessengerPage() {
 
       if (error) throw error;
       setMessages(data || []);
+      
+      // Marquer tous les messages reçus comme lus
+      const unreadMessages = data?.filter(msg => msg.receiver_id === user.id && !msg.is_read) || [];
+      if (unreadMessages.length > 0) {
+        const unreadIds = unreadMessages.map(msg => msg.id);
+        await supabase
+          .from('messages')
+          .update({ is_read: true })
+          .in('id', unreadIds);
+      }
+      
       scrollToBottom();
     } catch (err) {
       console.error('Error fetching messages:', err);
@@ -182,16 +195,25 @@ export default function MessengerPage() {
     if (!newMessage.trim() || !activeChat) return;
 
     const content = newMessage.trim();
+    const messageBeingRepliedTo = replyTo;
+    
     setNewMessage('');
     setShowStickers(false);
 
     try {
+      // Marquer le message auquel on répond comme lu
+      if (messageBeingRepliedTo) {
+        await supabase.from('messages')
+          .update({ is_read: true })
+          .eq('id', messageBeingRepliedTo.id);
+      }
+
       await supabase.from('messages').insert({
         sender_id: user.id,
         receiver_id: activeChat.user_id,
         content: content,
         is_read: false,
-        reply_to_id: replyTo?.id || null
+        reply_to_id: messageBeingRepliedTo?.id || null
       });
       
       setReplyTo(null);
@@ -210,7 +232,16 @@ export default function MessengerPage() {
     const file = e.target.files?.[0];
     if (!file || !activeChat) return;
 
+    const messageBeingRepliedTo = replyTo;
+
     try {
+      // Marquer le message auquel on répond comme lu
+      if (messageBeingRepliedTo) {
+        await supabase.from('messages')
+          .update({ is_read: true })
+          .eq('id', messageBeingRepliedTo.id);
+      }
+
       const imageUrl = await uploadToCloudinary(file);
       
       await supabase.from('messages').insert({
@@ -219,7 +250,7 @@ export default function MessengerPage() {
         content: '',
         image_url: imageUrl,
         is_read: false,
-        reply_to_id: replyTo?.id || null
+        reply_to_id: messageBeingRepliedTo?.id || null
       });
 
       setReplyTo(null);
@@ -239,13 +270,22 @@ export default function MessengerPage() {
     if (!activeChat) return;
     setShowStickers(false);
 
+    const messageBeingRepliedTo = replyTo;
+
     try {
+      // Marquer le message auquel on répond comme lu
+      if (messageBeingRepliedTo) {
+        await supabase.from('messages')
+          .update({ is_read: true })
+          .eq('id', messageBeingRepliedTo.id);
+      }
+
       await supabase.from('messages').insert({
         sender_id: user.id,
         receiver_id: activeChat.user_id,
         content: emoji,
         is_read: false,
-        reply_to_id: replyTo?.id || null
+        reply_to_id: messageBeingRepliedTo?.id || null
       });
       
       setReplyTo(null);
@@ -385,38 +425,103 @@ export default function MessengerPage() {
                   const isMine = msg.sender_id === user?.id;
                   const isEmoji = isSingleEmoji(msg.content);
                   const repliedMsg = msg.reply_to_id ? messages.find(m => m.id === msg.reply_to_id) : null;
+                  const currentSwipeOffset = swipeOffset[msg.id] || 0;
+                  const isBeingSwiped = swiping === msg.id;
+
+                  const handleSwipeStart = (e) => {
+                    if (e.touches) {
+                      swipeStartRef.current[msg.id] = e.touches[0].clientX;
+                    } else {
+                      swipeStartRef.current[msg.id] = e.clientX;
+                    }
+                    setSwiping(msg.id);
+                  };
+
+                  const handleSwipeMove = (e) => {
+                    if (!isBeingSwiped) return;
+                    const currentX = e.touches ? e.touches[0].clientX : e.clientX;
+                    const startX = swipeStartRef.current[msg.id];
+                    const diff = currentX - startX;
+
+                    if (!isMine && diff > 0 && diff < 100) {
+                      setSwipeOffset(prev => ({ ...prev, [msg.id]: diff }));
+                    } else if (isMine && diff < 0 && diff > -100) {
+                      setSwipeOffset(prev => ({ ...prev, [msg.id]: diff }));
+                    }
+                  };
+
+                  const handleSwipeEnd = () => {
+                    const offset = currentSwipeOffset;
+                    const threshold = 40;
+
+                    if (Math.abs(offset) > threshold) {
+                      setReplyTo(msg);
+                      setTimeout(() => {
+                        setSwipeOffset(prev => ({ ...prev, [msg.id]: 0 }));
+                        setSwiping(null);
+                      }, 200);
+                    } else {
+                      setSwipeOffset(prev => ({ ...prev, [msg.id]: 0 }));
+                      setSwiping(null);
+                    }
+                  };
 
                   return (
-                    <div key={msg.id || idx} className={`message-wrapper ${isMine ? 'mine' : 'theirs'} group`}>
-                      <button 
-                        className={`reply-icon-btn ${isMine ? 'left-side' : 'right-side'} opacity-0 group-hover:opacity-100 transition-opacity`}
-                        onClick={() => setReplyTo(msg)}
-                        title="Répondre"
+                    <div 
+                      key={msg.id || idx} 
+                      className={`message-wrapper ${isMine ? 'mine' : 'theirs'} group`}
+                      onTouchStart={handleSwipeStart}
+                      onTouchMove={handleSwipeMove}
+                      onTouchEnd={handleSwipeEnd}
+                      onMouseDown={handleSwipeStart}
+                      onMouseMove={handleSwipeMove}
+                      onMouseUp={handleSwipeEnd}
+                      onMouseLeave={handleSwipeEnd}
+                    >
+                      <div 
+                        className="message-content"
+                        style={{
+                          transform: `translateX(${currentSwipeOffset}px)`,
+                          transition: isBeingSwiped ? 'none' : 'transform 0.2s ease',
+                          opacity: 1 - Math.abs(currentSwipeOffset) / 150
+                        }}
                       >
-                        ↩️
-                      </button>
+                        <button 
+                          className={`reply-icon-btn ${isMine ? 'left-side' : 'right-side'} opacity-0 group-hover:opacity-100 transition-opacity`}
+                          onClick={() => setReplyTo(msg)}
+                          title="Répondre"
+                        >
+                          ↩️
+                        </button>
 
-                      {repliedMsg && (
-                        <div className={`message-quote ${isMine ? 'mine' : 'theirs'}`}>
-                          <div className="quote-author">{repliedMsg.sender_id === user.id ? 'Vous' : getProfileName(activeChat.profile)}</div>
-                          <div className="quote-content truncate">{repliedMsg.image_url ? '📷 Image' : repliedMsg.content}</div>
-                        </div>
-                      )}
+                        {repliedMsg && (
+                          <div className={`message-quote ${isMine ? 'mine' : 'theirs'}`}>
+                            <div className="quote-author">{repliedMsg.sender_id === user.id ? 'Vous' : getProfileName(activeChat.profile)}</div>
+                            <div className="quote-content truncate">{repliedMsg.image_url ? '📷 Image' : repliedMsg.content}</div>
+                          </div>
+                        )}
 
-                      {msg.image_url ? (
-                        <div className={`message-image-wrapper ${isMine ? 'mine' : 'theirs'}`}>
-                          <img src={msg.image_url} alt="Image" className="message-image" loading="lazy" />
+                        {msg.image_url ? (
+                          <div className={`message-image-wrapper ${isMine ? 'mine' : 'theirs'}`}>
+                            <img src={msg.image_url} alt="Image" className="message-image" loading="lazy" />
+                          </div>
+                        ) : isEmoji ? (
+                          <div className="message-emoji">{msg.content}</div>
+                        ) : (
+                          <div className={`message-bubble ${isMine ? 'mine' : 'theirs'}`}>
+                            {msg.content}
+                          </div>
+                        )}
+                        <div className="message-time text-xs text-secondary mt-1">
+                          {new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                         </div>
-                      ) : isEmoji ? (
-                        <div className="message-emoji">{msg.content}</div>
-                      ) : (
-                        <div className={`message-bubble ${isMine ? 'mine' : 'theirs'}`}>
-                          {msg.content}
-                        </div>
-                      )}
-                      <div className="message-time text-xs text-secondary mt-1">
-                        {new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                       </div>
+
+                      {Math.abs(currentSwipeOffset) > 15 && (
+                        <div className={`swipe-reply-indicator ${isMine ? 'left' : 'right'}`}>
+                          <span>↩️ Répondre</span>
+                        </div>
+                      )}
                     </div>
                   );
                 })

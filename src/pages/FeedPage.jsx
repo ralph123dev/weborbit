@@ -1,10 +1,10 @@
-import { useState, useEffect, useRef } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { supabase } from '../services/supabase';
-import { useAuth } from '../hooks/useAuth';
-import { formatTimeAgo, formatCount, uploadToCloudinary, formatTextWithLinks } from '../utils/helpers';
-import { Heart, MessageSquare, Share2, MoreHorizontal, Image as ImageIcon, X, Send, Copy, ArrowRight, ArrowLeft, MapPin, Calendar, Code } from 'lucide-react';
+import { Calendar, Code, Copy, Heart, Image as ImageIcon, MapPin, MessageSquare, MoreHorizontal, Send, Share2, X } from 'lucide-react';
+import { useEffect, useRef, useState } from 'react';
 import { toast } from 'react-hot-toast';
+import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../hooks/useAuth';
+import { supabase } from '../services/supabase';
+import { formatCount, formatTextWithLinks, formatTimeAgo, uploadToCloudinary } from '../utils/helpers';
 import './FeedPage.css';
 
 export default function FeedPage() {
@@ -42,6 +42,11 @@ export default function FeedPage() {
   const [invitation, setInvitation] = useState(null);
   const [showMobileComposer, setShowMobileComposer] = useState(false);
 
+  // Lightbox Gallery state
+  const [lightboxOpen, setLightboxOpen] = useState(false);
+  const [lightboxImages, setLightboxImages] = useState([]);
+  const [lightboxIndex, setLightboxIndex] = useState(0);
+
   useEffect(() => {
     fetchPosts();
 
@@ -62,6 +67,32 @@ export default function FeedPage() {
       supabase.removeChannel(subscription);
     };
   }, []);
+
+  // Handle keyboard shortcuts for lightbox
+  useEffect(() => {
+    if (!lightboxOpen) return;
+
+    const handleKeyDown = (e) => {
+      if (e.key === 'Escape') {
+        handleCloseLightbox();
+      } else if (e.key === 'ArrowLeft') {
+        e.preventDefault();
+        handlePrevImage();
+      } else if (e.key === 'ArrowRight') {
+        e.preventDefault();
+        handleNextImage();
+      }
+    };
+
+    // Prevent body scroll when lightbox is open
+    document.body.style.overflow = 'hidden';
+    window.addEventListener('keydown', handleKeyDown);
+    
+    return () => {
+      document.body.style.overflow = 'unset';
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [lightboxOpen, lightboxIndex]);
 
   const fetchPosts = async () => {
     try {
@@ -364,6 +395,26 @@ export default function FeedPage() {
     }
   };
 
+  const handleOpenGallery = (images, startIndex = 0) => {
+    setLightboxImages(images);
+    setLightboxIndex(startIndex);
+    setLightboxOpen(true);
+    document.body.style.overflow = 'hidden';
+  };
+
+  const handleCloseLightbox = () => {
+    setLightboxOpen(false);
+    document.body.style.overflow = '';
+  };
+
+  const handlePrevImage = () => {
+    setLightboxIndex(prev => prev === 0 ? lightboxImages.length - 1 : prev - 1);
+  };
+
+  const handleNextImage = () => {
+    setLightboxIndex(prev => prev === lightboxImages.length - 1 ? 0 : prev + 1);
+  };
+
   const handleOpenProfile = async (profileData) => {
     if (!profileData?.id) return;
     setProfilePanelLoading(true);
@@ -408,6 +459,27 @@ export default function FeedPage() {
       </div>
       
       <div className="feed-content">
+        <div className="composer glass">
+          <div className="composer-input-area">
+            <img 
+              src={profile?.avatar_url || 'https://via.placeholder.com/48'} 
+              alt="Avatar" 
+              className="avatar"
+              onError={(e) => e.target.src = 'https://via.placeholder.com/48'}
+            />
+            <textarea 
+              className="composer-textarea"
+              placeholder="Quoi de neuf ?"
+              value={newPostContent}
+              onChange={(e) => setNewPostContent(e.target.value)}
+              onClick={() => {
+                if (window.innerWidth <= 768) {
+                  setShowMobileComposer(true);
+                  document.body.style.overflow = 'hidden';
+                }
+              }}
+            />
+          </div>
 
           {selectedImages.length > 0 && (
             <div className="composer-preview-images">
@@ -536,12 +608,25 @@ export default function FeedPage() {
                   {post.image_urls && post.image_urls.length > 0 ? (
                     <div className="post-images">
                       {post.image_urls.map((img, idx) => (
-                        <img key={idx} src={img} alt="Post" className="post-image" loading="lazy" onClick={() => window.open(img, '_blank')} />
+                        <img 
+                          key={idx} 
+                          src={img} 
+                          alt="Post" 
+                          className="post-image cursor-pointer hover:opacity-80 transition-opacity" 
+                          loading="lazy" 
+                          onClick={() => handleOpenGallery(post.image_urls, idx)}
+                        />
                       ))}
                     </div>
                   ) : post.image_url ? (
                     <div className="post-images">
-                       <img src={post.image_url} alt="Post" className="post-image" loading="lazy" onClick={() => window.open(post.image_url, '_blank')} />
+                       <img 
+                         src={post.image_url} 
+                         alt="Post" 
+                         className="post-image cursor-pointer hover:opacity-80 transition-opacity" 
+                         loading="lazy" 
+                         onClick={() => handleOpenGallery([post.image_url], 0)}
+                       />
                     </div>
                   ) : null}
                   
@@ -845,6 +930,142 @@ export default function FeedPage() {
 
       {(profilePanel || profilePanelLoading) && (
         <div className="profile-panel-overlay" onClick={handleCloseProfile}></div>
+      )}
+
+      {showMobileComposer && (
+        <>
+          <div className="mobile-composer-overlay" onClick={() => {
+            setShowMobileComposer(false);
+            document.body.style.overflow = '';
+          }}></div>
+          <div className="mobile-composer-modal">
+            <div className="mobile-composer-header">
+              <div className="flex items-center gap-3">
+                <img 
+                  src={profile?.avatar_url || 'https://via.placeholder.com/40'} 
+                  alt="Avatar" 
+                  className="w-10 h-10 rounded-full object-cover"
+                  onError={(e) => e.target.src = 'https://via.placeholder.com/40'}
+                />
+                <div>
+                  <div className="font-bold text-sm">{profile?.first_name} {profile?.last_name}</div>
+                  <div className="text-xs text-secondary">@{profile?.username || 'user'}</div>
+                </div>
+              </div>
+              <button 
+                className="icon-btn"
+                onClick={() => {
+                  setShowMobileComposer(false);
+                  document.body.style.overflow = '';
+                }}
+              >
+                <X size={24} />
+              </button>
+            </div>
+
+            <textarea 
+              className="mobile-composer-textarea"
+              placeholder="Quoi de neuf ?"
+              value={newPostContent}
+              onChange={(e) => setNewPostContent(e.target.value)}
+              autoFocus
+            />
+
+            {selectedImages.length > 0 && (
+              <div className="mobile-composer-preview-images">
+                {selectedImages.map((file, idx) => (
+                  <div key={idx} className="mobile-preview-image-wrapper">
+                    <img src={URL.createObjectURL(file)} alt="Preview" className="mobile-preview-img" />
+                    <button className="remove-img-btn" onClick={() => removeImage(idx)}>
+                      <X size={16} />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            <div className="mobile-composer-footer">
+              <label className="mobile-composer-tool-btn cursor-pointer">
+                <ImageIcon size={20} className="text-primary" />
+                <input 
+                  type="file" 
+                  multiple 
+                  accept="image/*" 
+                  className="hidden" 
+                  onChange={handleImageSelect}
+                  style={{ display: 'none' }}
+                />
+              </label>
+              <button 
+                className="btn btn-primary w-full"
+                onClick={async () => {
+                  await handlePublish();
+                  if (newPostContent.trim() || selectedImages.length > 0) {
+                    setShowMobileComposer(false);
+                    document.body.style.overflow = '';
+                  }
+                }}
+                disabled={isPublishing || (!newPostContent.trim() && selectedImages.length === 0)}
+              >
+                {isPublishing ? 'Publication...' : 'Publier'}
+              </button>
+            </div>
+          </div>
+        </>
+      )}
+
+      {lightboxOpen && lightboxImages.length > 0 && (
+        <>
+          <div className="lightbox-overlay" onClick={handleCloseLightbox}></div>
+          <div className="lightbox-modal">
+            <button className="lightbox-close-btn" onClick={handleCloseLightbox}>
+              <X size={28} />
+            </button>
+
+            <div className="lightbox-content">
+              <img 
+                src={lightboxImages[lightboxIndex]} 
+                alt={`Image ${lightboxIndex + 1}`}
+                className="lightbox-image"
+              />
+            </div>
+
+            {lightboxImages.length > 1 && (
+              <>
+                <button 
+                  className="lightbox-nav-btn lightbox-prev"
+                  onClick={handlePrevImage}
+                  title="Image précédente"
+                >
+                  ❮
+                </button>
+                <button 
+                  className="lightbox-nav-btn lightbox-next"
+                  onClick={handleNextImage}
+                  title="Image suivante"
+                >
+                  ❯
+                </button>
+
+                <div className="lightbox-counter">
+                  {lightboxIndex + 1} / {lightboxImages.length}
+                </div>
+
+                <div className="lightbox-thumbnails">
+                  {lightboxImages.map((img, idx) => (
+                    <img 
+                      key={idx}
+                      src={img}
+                      alt={`Thumbnail ${idx + 1}`}
+                      className={`lightbox-thumbnail ${idx === lightboxIndex ? 'active' : ''}`}
+                      onClick={() => setLightboxIndex(idx)}
+                    />
+                  ))}
+                </div>
+              </>
+            )}
+          </div>
+        </>
       )}
     </div>
   );

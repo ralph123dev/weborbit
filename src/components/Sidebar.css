@@ -90,6 +90,16 @@
   transform: translateY(-2px);
 }
 
+.download-mobile-btn {
+  background: linear-gradient(135deg, rgba(106, 90, 255, 0.1) 0%, rgba(106, 90, 255, 0.05) 100%);
+  border: 1px solid rgba(106, 90, 255, 0.2);
+}
+
+.download-mobile-btn:hover {
+  background: linear-gradient(135deg, rgba(106, 90, 255, 0.2) 0%, rgba(106, 90, 255, 0.1) 100%);
+  transform: translateY(-2px);
+}
+
 .sidebar-footer {
   margin-top: auto;
   display: flex;
@@ -234,5 +244,40 @@
   0% { transform: scale(1); }
   50% { transform: scale(1.05); box-shadow: 0 4px 12px rgba(255, 45, 85, 0.6); }
   100% { transform: scale(1); }
+}
+
+/* Messenger dot badge - petit point rouge */
+.nav-item-wrapper {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  position: relative;
+}
+
+.sidebar-dot-badge {
+  position: absolute;
+  top: -2px;
+  right: -6px;
+  width: 10px;
+  height: 10px;
+  background: linear-gradient(135deg, var(--secondary-color) 0%, #FF5E7E 100%);
+  border-radius: 50%;
+  box-shadow: 0 2px 6px rgba(255, 45, 85, 0.5);
+  animation: pulse-dot 2s infinite;
+}
+
+@keyframes pulse-dot {
+  0% { 
+    transform: scale(1);
+    box-shadow: 0 2px 6px rgba(255, 45, 85, 0.5);
+  }
+  50% { 
+    transform: scale(1.1);
+    box-shadow: 0 2px 10px rgba(255, 45, 85, 0.7);
+  }
+  100% { 
+    transform: scale(1);
+    box-shadow: 0 2px 6px rgba(255, 45, 85, 0.5);
+  }
 }
 
