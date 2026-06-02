@@ -214,3 +214,25 @@
     border-radius: var(--radius-full);
   }
 }
+
+.sidebar-badge {
+  background: linear-gradient(135deg, var(--secondary-color) 0%, #FF5E7E 100%);
+  color: white;
+  font-size: 0.75rem;
+  font-weight: 800;
+  padding: 0.15rem 0.5rem;
+  border-radius: var(--radius-full);
+  margin-left: auto;
+  box-shadow: 0 2px 8px rgba(255, 45, 85, 0.4);
+  animation: pulse-badge 2s infinite;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+@keyframes pulse-badge {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.05); box-shadow: 0 4px 12px rgba(255, 45, 85, 0.6); }
+  100% { transform: scale(1); }
+}
+

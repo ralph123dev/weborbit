@@ -1,3 +1,4 @@
+import { useState, useEffect } from 'react';
 import { NavLink } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 import { Home, Video, MessageCircle, User, Settings, Bot, LogOut, UserPlus } from 'lucide-react';
@@ -7,6 +8,45 @@ import './Sidebar.css';
 
 export default function Sidebar({ isOpen, onClose }) {
   const { user, profile } = useAuth();
+  const [unreadCount, setUnreadCount] = useState(0);
+
+  useEffect(() => {
+    if (!user) return;
+
+    fetchUnreadCount();
+
+    const channel = supabase
+      .channel('unread-messages-sidebar')
+      .on('postgres_changes', {
+        event: '*',
+        schema: 'public',
+        table: 'messages',
+        filter: `receiver_id=eq.${user.id}`
+      }, () => {
+        fetchUnreadCount();
+      })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [user]);
+
+  const fetchUnreadCount = async () => {
+    try {
+      const { count, error } = await supabase
+        .from('messages')
+        .select('*', { count: 'exact', head: true })
+        .eq('receiver_id', user.id)
+        .eq('is_read', false);
+
+      if (!error) {
+        setUnreadCount(count || 0);
+      }
+    } catch (e) {
+      console.error('Error fetching unread count:', e);
+    }
+  };
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
@@ -46,6 +86,9 @@ export default function Sidebar({ isOpen, onClose }) {
           >
             <item.icon className="nav-icon" size={24} />
             <span className="nav-label">{item.label}</span>
+            {item.label === 'Messenger' && unreadCount > 0 && (
+              <span className="sidebar-badge">{unreadCount}</span>
+            )}
           </NavLink>
         ))}
 

@@ -20,7 +20,6 @@ export default function FeedPage() {
   const [editingPost, setEditingPost] = useState(null);
   const [editContent, setEditContent] = useState('');
   const [postDropdownOpen, setPostDropdownOpen] = useState(null);
-
   // Comments state
   const [activeCommentPost, setActiveCommentPost] = useState(null);
   const [comments, setComments] = useState([]);
@@ -41,6 +40,7 @@ export default function FeedPage() {
   const [profilePanelPosts, setProfilePanelPosts] = useState([]);
   const [profilePanelLoading, setProfilePanelLoading] = useState(false);
   const [invitation, setInvitation] = useState(null);
+  const [showMobileComposer, setShowMobileComposer] = useState(false);
 
   useEffect(() => {
     fetchPosts();
@@ -408,22 +408,7 @@ export default function FeedPage() {
       </div>
       
       <div className="feed-content">
-        <div className="composer glass">
-          <div className="composer-input-area">
-            <img 
-              src={profile?.avatar_url || 'https://via.placeholder.com/40'} 
-              alt="Avatar" 
-              className="avatar" 
-              onError={(e) => e.target.src = 'https://via.placeholder.com/40'}
-            />
-            <textarea 
-              placeholder="Quoi de neuf ?" 
-              className="composer-textarea"
-              value={newPostContent}
-              onChange={(e) => setNewPostContent(e.target.value)}
-            />
-          </div>
-          
+
           {selectedImages.length > 0 && (
             <div className="composer-preview-images">
               {selectedImages.map((file, idx) => (
