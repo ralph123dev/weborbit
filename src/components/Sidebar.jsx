@@ -2,6 +2,7 @@ import { NavLink } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 import { Home, Video, MessageCircle, User, Settings, Bot, LogOut } from 'lucide-react';
 import { supabase } from '../services/supabase';
+import logo from '../assets/logo.png';
 import './Sidebar.css';
 
 export default function Sidebar({ isOpen, onClose }) {
@@ -22,8 +23,8 @@ export default function Sidebar({ isOpen, onClose }) {
 
   return (
     <aside className={`sidebar ${isOpen ? 'open' : ''}`}>
-      <div className="sidebar-header">
-        <img src="/logo.png" alt="WebOrbit Logo" className="w-8 h-8 mr-2" />
+      <div className="sidebar-header flex items-center">
+        <img src={logo} alt="WebOrbit Logo" className="w-10 h-10 object-contain mr-3" />
         <h2 className="font-black text-2xl text-primary">WebOrbit</h2>
         <button className="close-btn" onClick={onClose}>
           <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
