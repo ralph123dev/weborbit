@@ -32,6 +32,7 @@ export default function FeedPage() {
   
   const [commentAudioBlob, setCommentAudioBlob] = useState(null);
   const [isRecordingComment, setIsRecordingComment] = useState(false);
+  const [showVoiceModal, setShowVoiceModal] = useState(false);
   const commentMediaRecorderRef = useRef(null);
   const commentAudioChunksRef = useRef([]);
 
@@ -243,6 +244,22 @@ export default function FeedPage() {
     }
   };
 
+  const handleReportPost = async (postId) => {
+    if (!window.confirm('Voulez-vous vraiment signaler cette publication ?')) return;
+    try {
+      const { error } = await supabase.from('reports_posts').insert({
+        post_id: postId,
+        reporter_id: user.id
+      });
+      if (error) throw error;
+      toast.success('Publication signalée avec succès.');
+      setPostDropdownOpen(null);
+    } catch (err) {
+      console.error(err);
+      toast.error('Erreur lors du signalement');
+    }
+  };
+
   // --- Comments Logic ---
   const handleOpenComments = (post) => {
     setActiveCommentPost(post);
@@ -259,6 +276,7 @@ export default function FeedPage() {
       commentMediaRecorderRef.current.stop();
       setIsRecordingComment(false);
     }
+    setShowVoiceModal(false);
     document.body.style.overflow = '';
   };
 
@@ -354,6 +372,7 @@ export default function FeedPage() {
       setNewComment('');
       setReplyingTo(null);
       setCommentAudioBlob(null);
+      setShowVoiceModal(false);
       
       setPosts(prev => prev.map(p => 
         p.id === activeCommentPost.id ? { ...p, comments_count: (p.comments_count || 0) + 1 } : p
@@ -366,6 +385,34 @@ export default function FeedPage() {
       console.error(err);
     } finally {
       setIsSubmittingComment(false);
+    }
+  };
+
+  const handleDeleteComment = async (commentId, createdAt) => {
+    const commentTime = new Date(createdAt).getTime();
+    const now = new Date().getTime();
+    if (now - commentTime > 120000) {
+      toast.error("Vous ne pouvez plus supprimer ce commentaire après 2 minutes.");
+      return;
+    }
+    
+    if (!window.confirm('Voulez-vous vraiment supprimer ce commentaire ?')) return;
+
+    try {
+      const { error } = await supabase.from('comments').delete().eq('id', commentId);
+      if (error) throw error;
+      
+      setComments(prev => prev.filter(c => c.id !== commentId));
+      
+      setPosts(prev => prev.map(p => 
+        p.id === activeCommentPost.id 
+          ? { ...p, comments_count: Math.max(0, (p.comments_count || 0) - 1) } 
+          : p
+      ));
+      toast.success('Commentaire supprimé.');
+    } catch (err) {
+      console.error(err);
+      toast.error('Erreur lors de la suppression du commentaire');
     }
   };
 
@@ -604,33 +651,42 @@ export default function FeedPage() {
                     </div>
                   </div>
                   
-                  {post.user_id === user?.id && (
-                    <div className="relative">
-                      <button className="post-options-btn" onClick={() => setPostDropdownOpen(postDropdownOpen === post.id ? null : post.id)}>
-                        <MoreHorizontal size={20} />
-                      </button>
-                      {postDropdownOpen === post.id && (
-                        <div className="absolute right-0 mt-2 w-48 glass rounded-xl shadow-lg overflow-hidden z-20" style={{ border: '1px solid var(--border-color)' }}>
+                  <div className="relative">
+                    <button className="post-options-btn" onClick={() => setPostDropdownOpen(postDropdownOpen === post.id ? null : post.id)}>
+                      <MoreHorizontal size={20} />
+                    </button>
+                    {postDropdownOpen === post.id && (
+                      <div className="absolute right-0 mt-2 w-48 glass rounded-xl shadow-lg overflow-hidden z-20" style={{ border: '1px solid var(--border-color)' }}>
+                        {post.user_id === user?.id ? (
+                          <>
+                            <button 
+                              className="w-full text-left px-4 py-3 hover:bg-white/10 text-sm transition-colors"
+                              onClick={() => {
+                                setEditingPost(post);
+                                setEditContent(post.content);
+                                setPostDropdownOpen(null);
+                              }}
+                            >
+                              ✏️ Modifier
+                            </button>
+                            <button 
+                              className="w-full text-left px-4 py-3 hover:bg-white/10 text-sm text-red-500 transition-colors border-t border-white/10"
+                              onClick={() => handleDeletePost(post.id)}
+                            >
+                              🗑️ Supprimer
+                            </button>
+                          </>
+                        ) : (
                           <button 
-                            className="w-full text-left px-4 py-3 hover:bg-white/10 text-sm transition-colors"
-                            onClick={() => {
-                              setEditingPost(post);
-                              setEditContent(post.content);
-                              setPostDropdownOpen(null);
-                            }}
+                            className="w-full text-left px-4 py-3 hover:bg-white/10 text-sm text-yellow-500 transition-colors"
+                            onClick={() => handleReportPost(post.id)}
                           >
-                            ✏️ Modifier
+                            ⚠️ Signaler
                           </button>
-                          <button 
-                            className="w-full text-left px-4 py-3 hover:bg-white/10 text-sm text-red-500 transition-colors border-t border-white/10"
-                            onClick={() => handleDeletePost(post.id)}
-                          >
-                            🗑️ Supprimer
-                          </button>
-                        </div>
-                      )}
-                    </div>
-                  )}
+                        )}
+                      </div>
+                    )}
+                  </div>
                 </div>
                 
                 <div className="post-body">
@@ -811,12 +867,22 @@ export default function FeedPage() {
                       <CustomAudioPlayer src={comment.audio_url} />
                     </div>
                   )}
-                  <button 
-                    className="reply-btn text-xs text-secondary font-bold mt-1"
-                    onClick={() => setReplyingTo(comment)}
-                  >
-                    Répondre
-                  </button>
+                  <div className="flex items-center gap-4 mt-1">
+                    <button 
+                      className="reply-btn text-xs text-secondary font-bold"
+                      onClick={() => setReplyingTo(comment)}
+                    >
+                      Répondre
+                    </button>
+                    {comment.user_id === user?.id && (
+                      <button 
+                        className="text-xs text-red-400 hover:text-red-500 transition-colors flex items-center gap-1"
+                        onClick={() => handleDeleteComment(comment.id, comment.created_at)}
+                      >
+                        <X size={12} /> Supprimer
+                      </button>
+                    )}
+                  </div>
                 </div>
               </div>
             ))
@@ -842,29 +908,85 @@ export default function FeedPage() {
               />
               <button 
                 type="button" 
-                className={`w-10 h-10 rounded-full flex items-center justify-center transition-all flex-shrink-0 ${isRecordingComment ? 'bg-red-500 text-white animate-pulse shadow-[0_0_15px_rgba(239,68,68,0.5)]' : 'bg-white/5 text-secondary hover:text-white hover:bg-white/10'}`}
-                onClick={isRecordingComment ? stopRecordingComment : startRecordingComment}
+                className="w-10 h-10 rounded-full flex items-center justify-center transition-all duration-300 flex-shrink-0 bg-white/5 border border-white/10 text-primary hover:bg-primary/20 hover:border-primary/50 hover:scale-105 shadow-sm"
+                onClick={() => {
+                  setShowVoiceModal(true);
+                  startRecordingComment();
+                }}
+                title="Message vocal"
               >
-                {isRecordingComment ? <div className="w-3 h-3 bg-white rounded-sm" /> : <Mic size={18} />}
+                <Mic size={20} />
               </button>
               <button type="submit" className="send-comment-btn" disabled={(!newComment.trim() && !commentAudioBlob) || isSubmittingComment}>
                 <Send size={18} />
               </button>
             </div>
-            {commentAudioBlob && (
-              <div className="flex items-center gap-2 bg-white/5 p-2 rounded-xl mt-1">
-                <CustomAudioPlayer src={URL.createObjectURL(commentAudioBlob)} />
-                <button type="button" className="w-8 h-8 rounded-full bg-red-500/20 text-red-400 flex items-center justify-center hover:bg-red-500 hover:text-white transition-colors flex-shrink-0" onClick={discardCommentAudio}>
-                  <X size={14} />
-                </button>
-              </div>
-            )}
           </form>
         </div>
       </div>
       
       {activeCommentPost && (
         <div className="comments-overlay" onClick={handleCloseComments}></div>
+      )}
+
+      {/* Voice Comment Modal */}
+      {showVoiceModal && (
+        <div className="modal-overlay" onClick={() => { setShowVoiceModal(false); discardCommentAudio(); stopRecordingComment(); }} style={{ zIndex: 10000 }}>
+          <div className="glass rounded-2xl p-6 w-[90%] max-w-sm flex flex-col items-center justify-center gap-4 relative" onClick={e => e.stopPropagation()} style={{ border: '1px solid var(--border-color)', animation: 'slideUp 0.3s ease-out' }}>
+            <button 
+              className="absolute top-4 right-4 text-secondary hover:text-white" 
+              onClick={() => { setShowVoiceModal(false); discardCommentAudio(); stopRecordingComment(); }}
+            >
+              <X size={20} />
+            </button>
+            <h3 className="font-bold text-lg mb-2">Message vocal</h3>
+            
+            {!commentAudioBlob ? (
+              <div className="flex flex-col items-center gap-4 w-full">
+                <div className={`w-24 h-24 rounded-full flex items-center justify-center ${isRecordingComment ? 'bg-red-500/20 text-red-500 animate-pulse' : 'bg-primary/20 text-primary'} transition-colors`}>
+                  <Mic size={40} className={isRecordingComment ? 'animate-bounce' : ''} />
+                </div>
+                {isRecordingComment ? (
+                  <>
+                    <span className="text-red-400 font-medium">Enregistrement en cours...</span>
+                    <button 
+                      className="btn w-full border border-red-500/50 text-red-400 hover:bg-red-500/10 mt-2 font-bold py-3 rounded-xl transition-colors"
+                      onClick={stopRecordingComment}
+                    >
+                      Terminer l'enregistrement
+                    </button>
+                  </>
+                ) : (
+                  <button 
+                    className="btn w-full bg-primary hover:bg-primary-hover text-white mt-2 font-bold py-3 rounded-xl transition-colors"
+                    onClick={startRecordingComment}
+                  >
+                    Démarrer l'enregistrement
+                  </button>
+                )}
+              </div>
+            ) : (
+              <div className="flex flex-col items-center gap-4 w-full">
+                <CustomAudioPlayer src={URL.createObjectURL(commentAudioBlob)} />
+                <div className="flex gap-3 w-full mt-2">
+                  <button 
+                    className="flex-1 py-3 rounded-xl bg-white/10 hover:bg-white/20 transition-colors font-medium text-sm flex items-center justify-center gap-2"
+                    onClick={() => { discardCommentAudio(); startRecordingComment(); }}
+                  >
+                    <X size={16} /> Reprendre
+                  </button>
+                  <button 
+                    className="flex-1 py-3 rounded-xl bg-primary hover:bg-primary-hover text-white transition-colors font-bold text-sm flex items-center justify-center gap-2"
+                    onClick={handlePostComment}
+                    disabled={isSubmittingComment}
+                  >
+                    {isSubmittingComment ? 'Envoi...' : <><Send size={16} /> Envoyer</>}
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
       )}
 
       {/* User Profile Side Panel */}
