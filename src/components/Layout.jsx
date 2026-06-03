@@ -1,9 +1,11 @@
 import { useState } from 'react';
 import Sidebar from './Sidebar';
+import CreatePostModal from './CreatePostModal';
 import './Layout.css';
 
 export default function Layout({ children }) {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
 
   return (
     <div className="layout">
@@ -21,7 +23,11 @@ export default function Layout({ children }) {
       </header>
 
       {/* Sidebar */}
-      <Sidebar isOpen={isMobileMenuOpen} onClose={() => setIsMobileMenuOpen(false)} />
+      <Sidebar 
+        isOpen={isMobileMenuOpen} 
+        onClose={() => setIsMobileMenuOpen(false)} 
+        onCreatePost={() => setIsCreateModalOpen(true)}
+      />
 
       {/* Main Content */}
       <main className="main-content">
@@ -32,6 +38,12 @@ export default function Layout({ children }) {
       {isMobileMenuOpen && (
         <div className="mobile-overlay" onClick={() => setIsMobileMenuOpen(false)}></div>
       )}
+
+      {/* Create Post Modal */}
+      <CreatePostModal 
+        isOpen={isCreateModalOpen} 
+        onClose={() => setIsCreateModalOpen(false)} 
+      />
     </div>
   );
 }

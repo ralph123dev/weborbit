@@ -100,6 +100,25 @@
   transform: translateY(-2px);
 }
 
+.create-post-btn {
+  background: linear-gradient(135deg, var(--primary-color) 0%, #8b5cf6 100%) !important;
+  color: white !important;
+  border-radius: var(--radius-full) !important;
+  font-weight: 700;
+  transition: all 0.25s ease !important;
+  box-shadow: 0 4px 15px rgba(106, 90, 255, 0.35);
+}
+
+.create-post-btn:hover {
+  transform: translateY(-2px) !important;
+  box-shadow: 0 6px 20px rgba(106, 90, 255, 0.5) !important;
+}
+
+.create-post-btn .nav-icon {
+  stroke: white;
+  stroke-width: 2.5;
+}
+
 .sidebar-footer {
   margin-top: auto;
   display: flex;

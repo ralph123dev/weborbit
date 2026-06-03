@@ -5,15 +5,7 @@
   flex-direction: column;
 }
 
-.profile-top-bar {
-  display: flex;
-  align-items: center;
-  padding: 1rem 1.5rem;
-  position: sticky;
-  top: 0;
-  z-index: 20;
-  backdrop-filter: blur(10px);
-}
+
 
 .profile-cover {
   height: 200px;
@@ -38,7 +30,7 @@
   display: flex;
   justify-content: space-between;
   align-items: flex-end;
-  margin-top: -60px;
+  margin-top: -40px;
   margin-bottom: 1rem;
   position: relative;
   z-index: 10;

@@ -1,12 +1,13 @@
-import { Download, Home, LogOut, MessageCircle, Settings, User, UserPlus, Video } from 'lucide-react';
+import { Download, Home, LogOut, MessageCircle, PlusCircle, Settings, User, UserPlus, Video } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { NavLink } from 'react-router-dom';
 import logo from '../assets/logo.png';
+import notificationSound from '../assets/tir.ogg';
 import { useAuth } from '../hooks/useAuth';
 import { supabase } from '../services/supabase';
 import './Sidebar.css';
 
-export default function Sidebar({ isOpen, onClose }) {
+export default function Sidebar({ isOpen, onClose, onCreatePost }) {
   const { user, profile } = useAuth();
   const [unreadCount, setUnreadCount] = useState(0);
 
@@ -23,6 +24,12 @@ export default function Sidebar({ isOpen, onClose }) {
         table: 'messages',
         filter: `receiver_id=eq.${user.id}`
       }, () => {
+        // Play notification sound for new message
+        try {
+          const audio = new Audio(notificationSound);
+          audio.volume = 0.7;
+          audio.play().catch(() => {});
+        } catch (e) { /* ignore */ }
         fetchUnreadCount();
       })
       .on('postgres_changes', {
@@ -112,6 +119,11 @@ export default function Sidebar({ isOpen, onClose }) {
         ))}
 
         <div className="nav-divider"></div>
+
+        <button className="nav-item create-post-btn" onClick={() => { onCreatePost?.(); if (window.innerWidth <= 768) onClose(); }}>
+          <PlusCircle className="nav-icon" size={24} />
+          <span className="nav-label font-bold">Créer</span>
+        </button>
         
         <button className="nav-item download-mobile-btn" onClick={handleDownloadAPK}>
           <Download className="nav-icon text-primary" size={24} />

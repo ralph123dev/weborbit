@@ -1,4 +1,4 @@
-import { ArrowLeft, Calendar, Heart, MapPin, MessageSquare, MoreHorizontal, Share2 } from 'lucide-react';
+import { Calendar, Heart, MapPin, MessageSquare, MoreHorizontal, Share2 } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
@@ -94,16 +94,6 @@ export default function ProfilePage() {
 
   return (
     <div className="profile-page">
-      <div className="profile-top-bar glass">
-        <button className="icon-btn" onClick={() => navigate(-1)}>
-          <ArrowLeft size={20} />
-        </button>
-        <div className="font-bold flex-1 ml-4">
-          {profile.first_name} {profile.last_name}
-          <div className="text-xs text-secondary">{posts.length} posts</div>
-        </div>
-      </div>
-
       {/* Cover Image */}
       <div className="profile-cover">
         {profile.cover_url ? (
@@ -157,14 +147,7 @@ export default function ProfilePage() {
             </div>
           </div>
 
-          <div className="profile-stats mt-4">
-            <div className="stat-item">
-              <span className="font-bold">{formatCount(stats.following)}</span> <span className="text-secondary">Abonnements</span>
-            </div>
-            <div className="stat-item">
-              <span className="font-bold">{formatCount(stats.followers)}</span> <span className="text-secondary">Abonnés</span>
-            </div>
-          </div>
+
         </div>
       </div>
 

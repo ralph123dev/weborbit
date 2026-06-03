@@ -18,6 +18,7 @@ import ProfileSetupModal from './components/ProfileSetupModal';
 import { useState, useEffect } from 'react';
 import { Toaster, toast } from 'react-hot-toast';
 import { supabase } from './services/supabase';
+import notificationSound from './assets/tir.ogg';
 
 function App() {
   const { user, profile, loading } = useAuth();
@@ -54,6 +55,15 @@ function App() {
       }, payload => {
         const notif = payload.new;
         if (!notif.is_read) {
+          // Play notification sound
+          try {
+            const audio = new Audio(notificationSound);
+            audio.volume = 0.7;
+            audio.play().catch(() => {});
+          } catch (e) {
+            // Ignore audio errors (e.g. autoplay blocked)
+          }
+
           let message = 'Nouvelle notification';
           if (notif.type === 'like') message = 'Quelqu\'un a aimé votre post ❤️';
           if (notif.type === 'comment') message = 'Nouveau commentaire sur votre post 💬';

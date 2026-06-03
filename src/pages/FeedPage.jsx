@@ -821,38 +821,13 @@ export default function FeedPage() {
           </div>
         ) : profilePanel && (
           <>
-            <div className="profile-panel-header">
-              {profilePanel.id !== user?.id && (
-                <div className="mr-auto">
-                  {!invitation ? (
-                    <button className="btn btn-primary text-xs py-1 px-3 flex items-center gap-2" onClick={handleSendInvitation}>
-                      + Inviter
-                    </button>
-                  ) : invitation.status === 'pending' ? (
-                    invitation.sender_id === user.id ? (
-                      <button className="btn btn-secondary text-xs py-1 px-3 flex items-center gap-2" onClick={handleCancelInvitation}>
-                        Annuler
-                      </button>
-                    ) : (
-                      <div className="text-xs text-secondary bg-white/5 py-1 px-3 rounded-full font-bold">
-                        Invitation reçue
-                      </div>
-                    )
-                  ) : invitation.status === 'accepted' ? (
-                    <button className="btn btn-primary text-xs py-1 px-3 flex items-center gap-2" onClick={() => navigate(`/messenger?userId=${profilePanel.id}`)}>
-                      Laisser un message en privé
-                    </button>
-                  ) : null}
-                </div>
-              )}
-              <button className="icon-btn" onClick={handleCloseProfile}><X size={20} /></button>
-            </div>
             <div className="profile-panel-cover">
               {profilePanel.cover_url ? (
                 <img src={profilePanel.cover_url} alt="Cover" className="w-full h-full object-cover" />
               ) : (
                 <div className="profile-panel-cover-gradient"></div>
               )}
+              <button className="icon-btn absolute top-4 right-4 z-10" onClick={handleCloseProfile}><X size={20} /></button>
             </div>
             <div className="profile-panel-body">
               <img 
@@ -886,6 +861,30 @@ export default function FeedPage() {
                 <div className="stat"><span className="font-bold">{formatCount(profilePanel.followers_count || 0)}</span> abonnés</div>
                 <div className="stat"><span className="font-bold">{formatCount(profilePanel.following_count || 0)}</span> abonnements</div>
               </div>
+
+              {profilePanel.id !== user?.id && (
+                <div className="mt-4 flex flex-col gap-2">
+                  {!invitation ? (
+                    <button className="btn btn-primary text-xs py-2 px-3 w-full" onClick={handleSendInvitation}>
+                      + Inviter
+                    </button>
+                  ) : invitation.status === 'pending' ? (
+                    invitation.sender_id === user.id ? (
+                      <button className="btn btn-secondary text-xs py-2 px-3 w-full" onClick={handleCancelInvitation}>
+                        Annuler invitation
+                      </button>
+                    ) : (
+                      <div className="text-xs text-secondary bg-white/5 py-2 px-3 rounded-full font-bold text-center">
+                        Invitation reçue
+                      </div>
+                    )
+                  ) : invitation.status === 'accepted' ? (
+                    <button className="btn btn-primary text-xs py-2 px-3 w-full" onClick={() => navigate(`/messenger?userId=${profilePanel.id}`)}>
+                      Message privé
+                    </button>
+                  ) : null}
+                </div>
+              )}
             </div>
 
             <div className="profile-panel-divider"></div>
