@@ -45,6 +45,11 @@ function App() {
   useEffect(() => {
     if (!user) return;
 
+    // Request native notification permission if not yet granted or denied
+    if ('Notification' in window && Notification.permission === 'default') {
+      Notification.requestPermission();
+    }
+
     const channel = supabase
       .channel('public:notifications')
       .on('postgres_changes', { 
@@ -68,7 +73,17 @@ function App() {
           if (notif.type === 'like') message = 'Quelqu\'un a aimé votre post ❤️';
           if (notif.type === 'comment') message = 'Nouveau commentaire sur votre post 💬';
           if (notif.type === 'follow') message = 'Vous avez un nouvel abonné ! 👤';
+          if (notif.type === 'invitation') message = 'Vous avez reçu une nouvelle invitation ! 🤝';
+          if (notif.type === 'invitation_accepted') message = 'Votre invitation a été acceptée ! ✅';
           
+          // Send Native Push Notification
+          if ('Notification' in window && Notification.permission === 'granted') {
+            new Notification('Orbit', {
+              body: message,
+              icon: '/logo.png', // Assuming logo.png is in public folder
+            });
+          }
+
           toast(message, {
             icon: '🔔',
             style: {

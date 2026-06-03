@@ -23,13 +23,23 @@ export default function Sidebar({ isOpen, onClose, onCreatePost }) {
         schema: 'public',
         table: 'messages',
         filter: `receiver_id=eq.${user.id}`
-      }, () => {
+      }, (payload) => {
         // Play notification sound for new message
         try {
           const audio = new Audio(notificationSound);
           audio.volume = 0.7;
           audio.play().catch(() => {});
         } catch (e) { /* ignore */ }
+
+        // Show Native Push Notification
+        if ('Notification' in window && Notification.permission === 'granted') {
+          const content = payload.new.content || (payload.new.image_url ? '📷 Image reçue' : 'Nouveau message reçu 💬');
+          new Notification('Orbit - Message', {
+            body: content,
+            icon: '/logo.png'
+          });
+        }
+
         fetchUnreadCount();
       })
       .on('postgres_changes', {
