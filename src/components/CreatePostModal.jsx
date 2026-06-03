@@ -1,4 +1,5 @@
-import { Image as ImageIcon, Sparkles, X } from 'lucide-react';
+import { Image as ImageIcon, Mic, Sparkles, X } from 'lucide-react';
+import CustomAudioPlayer from './CustomAudioPlayer';
 import { useRef, useState } from 'react';
 import { toast } from 'react-hot-toast';
 import { useAuth } from '../hooks/useAuth';
@@ -11,7 +12,11 @@ export default function CreatePostModal({ isOpen, onClose }) {
   const [content, setContent] = useState('');
   const [selectedImages, setSelectedImages] = useState([]);
   const [isPublishing, setIsPublishing] = useState(false);
+  const [isRecording, setIsRecording] = useState(false);
+  const [audioBlob, setAudioBlob] = useState(null);
   const fileInputRef = useRef(null);
+  const mediaRecorderRef = useRef(null);
+  const audioChunksRef = useRef([]);
 
   if (!isOpen) return null;
 
@@ -26,8 +31,47 @@ export default function CreatePostModal({ isOpen, onClose }) {
     setSelectedImages(prev => prev.filter((_, i) => i !== index));
   };
 
+  const startRecording = async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const mediaRecorder = new MediaRecorder(stream);
+      mediaRecorderRef.current = mediaRecorder;
+      audioChunksRef.current = [];
+
+      mediaRecorder.ondataavailable = (e) => {
+        if (e.data.size > 0) {
+          audioChunksRef.current.push(e.data);
+        }
+      };
+
+      mediaRecorder.onstop = () => {
+        const blob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
+        setAudioBlob(blob);
+        stream.getTracks().forEach(track => track.stop());
+      };
+
+      mediaRecorder.start();
+      setIsRecording(true);
+    } catch (err) {
+      console.error('Error accessing microphone:', err);
+      toast.error('Impossible d\'accéder au microphone');
+    }
+  };
+
+  const stopRecording = () => {
+    if (mediaRecorderRef.current && isRecording) {
+      mediaRecorderRef.current.stop();
+      setIsRecording(false);
+    }
+  };
+
+  const discardAudio = () => {
+    setAudioBlob(null);
+    audioChunksRef.current = [];
+  };
+
   const handlePublish = async () => {
-    if ((!content.trim() && selectedImages.length === 0) || !user) return;
+    if ((!content.trim() && selectedImages.length === 0 && !audioBlob) || !user) return;
 
     setIsPublishing(true);
     try {
@@ -37,18 +81,38 @@ export default function CreatePostModal({ isOpen, onClose }) {
         uploadedImageUrls.push(url);
       }
 
-      const { error } = await supabase.from('posts').insert({
+      let audioUrl = null;
+      if (audioBlob) {
+        audioUrl = await uploadToCloudinary(audioBlob);
+      }
+
+      const postData = {
         content: content.trim(),
         user_id: user.id,
         image_urls: uploadedImageUrls,
         image_url: uploadedImageUrls[0] || ''
-      });
+      };
+
+      if (audioUrl) {
+        postData.audio_url = audioUrl;
+      }
+
+      let { error } = await supabase.from('posts').insert(postData);
+
+      // If audio_url column doesn't exist, retry without it
+      if (error && error.code === 'PGRST204' && audioUrl) {
+        toast.error("La colonne audio n'existe pas encore. Publication sans audio...");
+        delete postData.audio_url;
+        const retry = await supabase.from('posts').insert(postData);
+        error = retry.error;
+      }
 
       if (error) throw error;
 
       toast.success('Publication réussie ! 🎉');
       setContent('');
       setSelectedImages([]);
+      setAudioBlob(null);
       onClose();
     } catch (err) {
       console.error('Error publishing post:', err);
@@ -60,6 +124,7 @@ export default function CreatePostModal({ isOpen, onClose }) {
 
   const handleOverlayClick = (e) => {
     if (e.target === e.currentTarget && !isPublishing) {
+      if (isRecording) stopRecording();
       onClose();
     }
   };
@@ -115,6 +180,16 @@ export default function CreatePostModal({ isOpen, onClose }) {
               ))}
             </div>
           )}
+
+          {/* Audio Preview */}
+          {audioBlob && (
+            <div className="create-post-audio-preview">
+              <CustomAudioPlayer src={URL.createObjectURL(audioBlob)} />
+              <button className="create-post-remove-audio" onClick={discardAudio} disabled={isPublishing}>
+                <X size={14} />
+              </button>
+            </div>
+          )}
         </div>
 
         {/* Footer */}
@@ -133,12 +208,21 @@ export default function CreatePostModal({ isOpen, onClose }) {
                 disabled={isPublishing}
               />
             </label>
+
+            <button
+              className={`create-post-tool-btn bg-transparent border-none outline-none ${isRecording ? 'recording' : ''}`}
+              onClick={isRecording ? stopRecording : startRecording}
+              disabled={isPublishing || audioBlob !== null}
+            >
+              <Mic size={20} />
+              <span className="create-post-tool-label">{isRecording ? 'Arrêter' : 'Vocal'}</span>
+            </button>
           </div>
 
           <button
             className="create-post-publish-btn"
             onClick={handlePublish}
-            disabled={isPublishing || (!content.trim() && selectedImages.length === 0)}
+            disabled={isPublishing || (!content.trim() && selectedImages.length === 0 && !audioBlob)}
           >
             {isPublishing ? (
               <>

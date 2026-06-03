@@ -4,6 +4,7 @@ import { useParams } from 'react-router-dom';
 import logo from '../assets/logo.png';
 import { supabase } from '../services/supabase';
 import { formatTextWithLinks, formatTimeAgo } from '../utils/helpers';
+import CustomAudioPlayer from '../components/CustomAudioPlayer';
 import './PostEmbedPage.css';
 
 export default function PostEmbedPage() {
@@ -116,6 +117,13 @@ export default function PostEmbedPage() {
             <img src={post.image_url} alt="Post attachment" className="embed-img single-img" />
           </div>
         ) : null}
+
+        {/* Audio */}
+        {post.audio_url && (
+          <div className="embed-audio mt-3" onClick={(e) => e.stopPropagation()}>
+            <CustomAudioPlayer src={post.audio_url} />
+          </div>
+        )}
       </div>
 
       {/* Embed Footer */}

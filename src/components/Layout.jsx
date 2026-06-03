@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Sidebar from './Sidebar';
 import CreatePostModal from './CreatePostModal';
 import './Layout.css';
@@ -6,6 +6,12 @@ import './Layout.css';
 export default function Layout({ children }) {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+
+  useEffect(() => {
+    const handleOpenModal = () => setIsCreateModalOpen(true);
+    window.addEventListener('openCreatePostModal', handleOpenModal);
+    return () => window.removeEventListener('openCreatePostModal', handleOpenModal);
+  }, []);
 
   return (
     <div className="layout">

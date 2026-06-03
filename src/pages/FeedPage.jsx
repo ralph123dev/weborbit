@@ -1,10 +1,11 @@
-import { Calendar, Code, Copy, Heart, Image as ImageIcon, MapPin, MessageSquare, MoreHorizontal, Send, Share2, X } from 'lucide-react';
+import { Calendar, Code, Copy, Heart, Image as ImageIcon, MapPin, MessageSquare, Mic, MoreHorizontal, Send, Share2, X } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { toast } from 'react-hot-toast';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 import { supabase } from '../services/supabase';
 import { formatCount, formatTextWithLinks, formatTimeAgo, uploadToCloudinary } from '../utils/helpers';
+import CustomAudioPlayer from '../components/CustomAudioPlayer';
 import './FeedPage.css';
 
 export default function FeedPage() {
@@ -28,6 +29,11 @@ export default function FeedPage() {
   const [isSubmittingComment, setIsSubmittingComment] = useState(false);
   const [replyingTo, setReplyingTo] = useState(null);
   const commentsEndRef = useRef(null);
+  
+  const [commentAudioBlob, setCommentAudioBlob] = useState(null);
+  const [isRecordingComment, setIsRecordingComment] = useState(false);
+  const commentMediaRecorderRef = useRef(null);
+  const commentAudioChunksRef = useRef([]);
 
   // Share state
   const [sharePost, setSharePost] = useState(null);
@@ -248,7 +254,51 @@ export default function FeedPage() {
   const handleCloseComments = () => {
     setActiveCommentPost(null);
     setComments([]);
+    setCommentAudioBlob(null);
+    if (isRecordingComment && commentMediaRecorderRef.current) {
+      commentMediaRecorderRef.current.stop();
+      setIsRecordingComment(false);
+    }
     document.body.style.overflow = '';
+  };
+
+  const startRecordingComment = async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const mediaRecorder = new MediaRecorder(stream);
+      commentMediaRecorderRef.current = mediaRecorder;
+      commentAudioChunksRef.current = [];
+
+      mediaRecorder.ondataavailable = (e) => {
+        if (e.data.size > 0) {
+          commentAudioChunksRef.current.push(e.data);
+        }
+      };
+
+      mediaRecorder.onstop = () => {
+        const audioBlob = new Blob(commentAudioChunksRef.current, { type: 'audio/webm' });
+        setCommentAudioBlob(audioBlob);
+        stream.getTracks().forEach(track => track.stop());
+      };
+
+      mediaRecorder.start();
+      setIsRecordingComment(true);
+    } catch (err) {
+      console.error('Error accessing microphone:', err);
+      toast.error("Impossible d'accéder au microphone");
+    }
+  };
+
+  const stopRecordingComment = () => {
+    if (commentMediaRecorderRef.current && isRecordingComment) {
+      commentMediaRecorderRef.current.stop();
+      setIsRecordingComment(false);
+    }
+  };
+
+  const discardCommentAudio = () => {
+    setCommentAudioBlob(null);
+    commentAudioChunksRef.current = [];
   };
 
   const fetchComments = async (postId) => {
@@ -268,21 +318,42 @@ export default function FeedPage() {
 
   const handlePostComment = async (e) => {
     e.preventDefault();
-    if (!newComment.trim() || !activeCommentPost) return;
+    if ((!newComment.trim() && !commentAudioBlob) || !activeCommentPost) return;
     setIsSubmittingComment(true);
     try {
-      const { data, error } = await supabase.from('comments').insert({
+      let audioUrl = null;
+      if (commentAudioBlob) {
+        audioUrl = await uploadToCloudinary(commentAudioBlob);
+      }
+
+      const commentData = {
         post_id: activeCommentPost.id,
         user_id: user.id,
         content: newComment.trim(),
         parent_id: replyingTo?.id || null
-      }).select('*, profiles(id, first_name, last_name, avatar_url, username)').single();
+      };
+
+      if (audioUrl) {
+        commentData.audio_url = audioUrl;
+      }
+
+      let { data, error } = await supabase.from('comments').insert(commentData).select('*, profiles(id, first_name, last_name, avatar_url, username)').single();
       
+      // Fallback if audio_url column doesn't exist yet
+      if (error && error.code === 'PGRST204' && audioUrl) {
+        toast.error("La colonne audio pour les commentaires n'existe pas encore. Publication sans audio...");
+        delete commentData.audio_url;
+        const retry = await supabase.from('comments').insert(commentData).select('*, profiles(id, first_name, last_name, avatar_url, username)').single();
+        error = retry.error;
+        data = retry.data;
+      }
+
       if (error) throw error;
       
       setComments(prev => [...prev, data]);
       setNewComment('');
       setReplyingTo(null);
+      setCommentAudioBlob(null);
       
       setPosts(prev => prev.map(p => 
         p.id === activeCommentPost.id ? { ...p, comments_count: (p.comments_count || 0) + 1 } : p
@@ -459,62 +530,25 @@ export default function FeedPage() {
       </div>
       
       <div className="feed-content">
-        <div className="composer glass">
-          <div className="composer-input-area">
+        <div className="composer glass cursor-pointer transition-transform hover:scale-[1.01]" onClick={() => window.dispatchEvent(new Event('openCreatePostModal'))} style={{ padding: '1.25rem' }}>
+          <div className="composer-input-area pointer-events-none mb-0">
             <img 
               src={profile?.avatar_url || 'https://static.vecteezy.com/system/resources/thumbnails/004/607/791/small_2x/man-face-emotive-icon-smiling-male-character-in-blue-shirt-flat-illustration-isolated-on-white-happy-human-psychological-portrait-positive-emotions-user-avatar-for-app-web-design-vector.jpg'} 
               alt="Avatar" 
               className="avatar"
-              onError={(e) => e.target.src = 'https://static.vecteezy.com/system/resources/thumbnails/004/607/791/small_2x/man-face-emotive-icon-smiling-male-character-in-blue-shirt-flat-illustration-isolated-on-white-happy-human-psychological-portrait-positive-emotions-user-avatar-for-app-web-design-vector.jpg'}
             />
-            <textarea 
-              className="composer-textarea"
-              placeholder="Quoi de neuf ?"
-              value={newPostContent}
-              onChange={(e) => setNewPostContent(e.target.value)}
-              onClick={() => {
-                if (window.innerWidth <= 768) {
-                  setShowMobileComposer(true);
-                  document.body.style.overflow = 'hidden';
-                }
-              }}
-            />
+            <div className="composer-textarea flex items-center text-secondary bg-transparent border-none outline-none" style={{ height: '48px', fontSize: '1.1rem' }}>
+              Quoi de neuf ?
+            </div>
           </div>
-
-          {selectedImages.length > 0 && (
-            <div className="composer-preview-images">
-              {selectedImages.map((file, idx) => (
-                <div key={idx} className="preview-image-wrapper">
-                  <img src={URL.createObjectURL(file)} alt="Preview" className="preview-img" />
-                  <button className="remove-img-btn" onClick={() => removeImage(idx)}>
-                    <X size={14} />
-                  </button>
-                </div>
-              ))}
-            </div>
-          )}
-
-          <div className="composer-actions">
+          <div className="composer-actions pointer-events-none mt-2 pt-3 border-t border-white/10">
             <div className="composer-tools">
-              <label className="composer-tool-btn cursor-pointer">
-                <ImageIcon size={20} className="text-primary" />
-                <input 
-                  type="file" 
-                  multiple 
-                  accept="image/*" 
-                  className="hidden" 
-                  onChange={handleImageSelect}
-                  style={{ display: 'none' }}
-                />
-              </label>
+              <div className="flex items-center gap-2">
+                <div className="w-9 h-9 rounded-full bg-white/5 flex items-center justify-center text-primary"><ImageIcon size={18} /></div>
+                <div className="w-9 h-9 rounded-full bg-white/5 flex items-center justify-center text-primary"><Mic size={18} /></div>
+              </div>
             </div>
-            <button 
-              className="btn btn-primary" 
-              onClick={handlePublish}
-              disabled={isPublishing || (!newPostContent.trim() && selectedImages.length === 0)}
-            >
-              {isPublishing ? 'Publication...' : 'Publier'}
-            </button>
+            <button className="btn btn-primary px-5 py-1.5 rounded-full font-semibold shadow-lg">Créer</button>
           </div>
         </div>
 
@@ -631,8 +665,8 @@ export default function FeedPage() {
                   ) : null}
                   
                   {post.audio_url && (
-                    <div className="post-audio">
-                      <audio controls src={post.audio_url} className="w-full mt-2" />
+                    <div className="post-audio" style={{ marginTop: '0.75rem' }}>
+                      <CustomAudioPlayer src={post.audio_url} />
                     </div>
                   )}
                 </div>
@@ -772,6 +806,11 @@ export default function FeedPage() {
                   <div className="comment-text text-sm">
                     {comment.content}
                   </div>
+                  {comment.audio_url && (
+                    <div className="mt-2 mb-1">
+                      <CustomAudioPlayer src={comment.audio_url} />
+                    </div>
+                  )}
                   <button 
                     className="reply-btn text-xs text-secondary font-bold mt-1"
                     onClick={() => setReplyingTo(comment)}
@@ -792,17 +831,34 @@ export default function FeedPage() {
               <button onClick={() => setReplyingTo(null)}><X size={14} /></button>
             </div>
           )}
-          <form className="comment-input-area" onSubmit={handlePostComment}>
-            <input 
-              type="text" 
-              placeholder="Écrivez un commentaire..."
-              className="comment-input"
-              value={newComment}
-              onChange={(e) => setNewComment(e.target.value)}
-            />
-            <button type="submit" className="send-comment-btn" disabled={!newComment.trim() || isSubmittingComment}>
-              <Send size={18} />
-            </button>
+          <form className="comment-input-area flex-col items-stretch gap-2" onSubmit={handlePostComment}>
+            <div className="flex items-center gap-2 w-full">
+              <input 
+                type="text" 
+                placeholder="Écrivez un commentaire..."
+                className="comment-input"
+                value={newComment}
+                onChange={(e) => setNewComment(e.target.value)}
+              />
+              <button 
+                type="button" 
+                className={`w-10 h-10 rounded-full flex items-center justify-center transition-all flex-shrink-0 ${isRecordingComment ? 'bg-red-500 text-white animate-pulse shadow-[0_0_15px_rgba(239,68,68,0.5)]' : 'bg-white/5 text-secondary hover:text-white hover:bg-white/10'}`}
+                onClick={isRecordingComment ? stopRecordingComment : startRecordingComment}
+              >
+                {isRecordingComment ? <div className="w-3 h-3 bg-white rounded-sm" /> : <Mic size={18} />}
+              </button>
+              <button type="submit" className="send-comment-btn" disabled={(!newComment.trim() && !commentAudioBlob) || isSubmittingComment}>
+                <Send size={18} />
+              </button>
+            </div>
+            {commentAudioBlob && (
+              <div className="flex items-center gap-2 bg-white/5 p-2 rounded-xl mt-1">
+                <CustomAudioPlayer src={URL.createObjectURL(commentAudioBlob)} />
+                <button type="button" className="w-8 h-8 rounded-full bg-red-500/20 text-red-400 flex items-center justify-center hover:bg-red-500 hover:text-white transition-colors flex-shrink-0" onClick={discardCommentAudio}>
+                  <X size={14} />
+                </button>
+              </div>
+            )}
           </form>
         </div>
       </div>
@@ -929,88 +985,6 @@ export default function FeedPage() {
 
       {(profilePanel || profilePanelLoading) && (
         <div className="profile-panel-overlay" onClick={handleCloseProfile}></div>
-      )}
-
-      {showMobileComposer && (
-        <>
-          <div className="mobile-composer-overlay" onClick={() => {
-            setShowMobileComposer(false);
-            document.body.style.overflow = '';
-          }}></div>
-          <div className="mobile-composer-modal">
-            <div className="mobile-composer-header">
-              <div className="flex items-center gap-3">
-                <img 
-                  src={profile?.avatar_url || 'https://static.vecteezy.com/system/resources/thumbnails/004/607/791/small_2x/man-face-emotive-icon-smiling-male-character-in-blue-shirt-flat-illustration-isolated-on-white-happy-human-psychological-portrait-positive-emotions-user-avatar-for-app-web-design-vector.jpg'} 
-                  alt="Avatar" 
-                  className="w-10 h-10 rounded-full object-cover"
-                  onError={(e) => e.target.src = 'https://static.vecteezy.com/system/resources/thumbnails/004/607/791/small_2x/man-face-emotive-icon-smiling-male-character-in-blue-shirt-flat-illustration-isolated-on-white-happy-human-psychological-portrait-positive-emotions-user-avatar-for-app-web-design-vector.jpg'}
-                />
-                <div>
-                  <div className="font-bold text-sm">{profile?.first_name} {profile?.last_name}</div>
-                  <div className="text-xs text-secondary">@{profile?.username || 'user'}</div>
-                </div>
-              </div>
-              <button 
-                className="icon-btn"
-                onClick={() => {
-                  setShowMobileComposer(false);
-                  document.body.style.overflow = '';
-                }}
-              >
-                <X size={24} />
-              </button>
-            </div>
-
-            <textarea 
-              className="mobile-composer-textarea"
-              placeholder="Quoi de neuf ?"
-              value={newPostContent}
-              onChange={(e) => setNewPostContent(e.target.value)}
-              autoFocus
-            />
-
-            {selectedImages.length > 0 && (
-              <div className="mobile-composer-preview-images">
-                {selectedImages.map((file, idx) => (
-                  <div key={idx} className="mobile-preview-image-wrapper">
-                    <img src={URL.createObjectURL(file)} alt="Preview" className="mobile-preview-img" />
-                    <button className="remove-img-btn" onClick={() => removeImage(idx)}>
-                      <X size={16} />
-                    </button>
-                  </div>
-                ))}
-              </div>
-            )}
-
-            <div className="mobile-composer-footer">
-              <label className="mobile-composer-tool-btn cursor-pointer">
-                <ImageIcon size={20} className="text-primary" />
-                <input 
-                  type="file" 
-                  multiple 
-                  accept="image/*" 
-                  className="hidden" 
-                  onChange={handleImageSelect}
-                  style={{ display: 'none' }}
-                />
-              </label>
-              <button 
-                className="btn btn-primary w-full"
-                onClick={async () => {
-                  await handlePublish();
-                  if (newPostContent.trim() || selectedImages.length > 0) {
-                    setShowMobileComposer(false);
-                    document.body.style.overflow = '';
-                  }
-                }}
-                disabled={isPublishing || (!newPostContent.trim() && selectedImages.length === 0)}
-              >
-                {isPublishing ? 'Publication...' : 'Publier'}
-              </button>
-            </div>
-          </div>
-        </>
       )}
 
       {lightboxOpen && lightboxImages.length > 0 && (
