@@ -7,7 +7,7 @@ import { supabase } from '../services/supabase';
 import { uploadToCloudinary } from '../utils/helpers';
 import './CreatePostModal.css';
 
-export default function CreatePostModal({ isOpen, onClose }) {
+export default function CreatePostModal({ isOpen, onClose, groupId }) {
   const { user, profile } = useAuth();
   const [content, setContent] = useState('');
   const [selectedImages, setSelectedImages] = useState([]);
@@ -92,6 +92,10 @@ export default function CreatePostModal({ isOpen, onClose }) {
         image_urls: uploadedImageUrls,
         image_url: uploadedImageUrls[0] || ''
       };
+
+      if (groupId) {
+        postData.group_id = groupId;
+      }
 
       if (audioUrl) {
         postData.audio_url = audioUrl;

@@ -5,11 +5,16 @@ import logo from '../assets/logo.png';
 import notificationSound from '../assets/tir.ogg';
 import { useAuth } from '../hooks/useAuth';
 import { supabase } from '../services/supabase';
+import GroupCreateModal from './GroupCreateModal';
+import GroupListModal from './GroupListModal';
 import './Sidebar.css';
 
 export default function Sidebar({ isOpen, onClose, onCreatePost }) {
   const { user, profile } = useAuth();
   const [unreadCount, setUnreadCount] = useState(0);
+  const [isGroupMenuOpen, setIsGroupMenuOpen] = useState(false);
+  const [isGroupModalOpen, setIsGroupModalOpen] = useState(false);
+  const [isGroupListOpen, setIsGroupListOpen] = useState(false);
 
   useEffect(() => {
     if (!user) return;
@@ -113,6 +118,7 @@ export default function Sidebar({ isOpen, onClose, onCreatePost }) {
           <NavLink 
             key={item.path} 
             to={item.path} 
+            end={item.path === '/'}
             className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}
             onClick={() => {
               if (window.innerWidth <= 768) onClose();
@@ -128,6 +134,49 @@ export default function Sidebar({ isOpen, onClose, onCreatePost }) {
           </NavLink>
         ))}
 
+        <button
+          className={`nav-item group-nav-item ${isGroupMenuOpen ? 'active' : ''}`}
+          onClick={() => setIsGroupMenuOpen((current) => !current)}
+          type="button"
+        >
+          <div className="nav-item-wrapper">
+            <span className="nav-icon ion-nav-icon"><ion-icon name="people-outline"></ion-icon></span>
+            <span className="nav-label">Groupes</span>
+          </div>
+          <span className="group-toggle-arrow">{isGroupMenuOpen ? '▾' : '▸'}</span>
+        </button>
+
+        {isGroupMenuOpen && (
+          <div className="group-submenu">
+            <button
+              className="nav-item group-submenu-item"
+              onClick={() => {
+                setIsGroupModalOpen(true);
+                if (window.innerWidth <= 768) onClose();
+              }}
+              type="button"
+            >
+              <div className="nav-item-wrapper">
+                <PlusCircle className="nav-icon" size={18} />
+                <span className="nav-label">Créer un groupe</span>
+              </div>
+            </button>
+            <button
+              className="nav-item group-submenu-item"
+              onClick={() => {
+                setIsGroupListOpen(true);
+                if (window.innerWidth <= 768) onClose();
+              }}
+              type="button"
+            >
+              <div className="nav-item-wrapper">
+                <UserPlus className="nav-icon" size={18} />
+                <span className="nav-label">Mes groupes</span>
+              </div>
+            </button>
+          </div>
+        )}
+
         <div className="nav-divider"></div>
 
         <button className="nav-item create-post-btn" onClick={() => { onCreatePost?.(); if (window.innerWidth <= 768) onClose(); }}>
@@ -140,6 +189,9 @@ export default function Sidebar({ isOpen, onClose, onCreatePost }) {
           <span className="nav-label font-bold text-primary">Télécharger APK</span>
         </button>
       </nav>
+
+      <GroupListModal isOpen={isGroupListOpen} onClose={() => setIsGroupListOpen(false)} />
+      <GroupCreateModal isOpen={isGroupModalOpen} onClose={() => setIsGroupModalOpen(false)} />
 
       {profile && (
         <div className="sidebar-footer">

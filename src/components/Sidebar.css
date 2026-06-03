@@ -74,6 +74,39 @@
   stroke-width: 2.5;
 }
 
+.group-nav-item {
+  justify-content: space-between;
+}
+
+.group-toggle-arrow {
+  font-size: 0.9rem;
+  color: var(--text-secondary);
+}
+
+.group-submenu {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  padding-left: 0.85rem;
+  margin-bottom: 0.5rem;
+}
+
+.group-submenu-item {
+  padding-left: 1.5rem;
+  border-radius: 16px;
+}
+
+.ion-nav-icon {
+  display: inline-flex;
+  width: 24px;
+  height: 24px;
+}
+
+.group-submenu-item .nav-icon {
+  width: 20px;
+  height: 20px;
+}
+
 .nav-divider {
   height: 1px;
   background-color: var(--border-color);
@@ -191,8 +224,18 @@
     padding: 1.5rem 0.5rem;
   }
   
-  .logo-text, .nav-label, .user-info {
+  .logo-text, .nav-label, .user-info, .group-toggle-arrow {
     display: none;
+  }
+
+  .group-submenu {
+    padding-left: 0;
+    align-items: center;
+  }
+
+  .group-submenu-item {
+    padding-left: 0.875rem;
+    justify-content: center;
   }
 
   .nav-item {
@@ -227,8 +270,18 @@
     transform: translateX(0);
   }
 
-  .close-btn, .logo-text, .nav-label, .user-info {
+  .close-btn, .logo-text, .nav-label, .user-info, .group-toggle-arrow {
     display: block;
+  }
+  
+  .group-submenu {
+    padding-left: 0.85rem;
+    align-items: stretch;
+  }
+
+  .group-submenu-item {
+    padding-left: 1.5rem;
+    justify-content: flex-start;
   }
   
   .nav-item {

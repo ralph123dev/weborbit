@@ -10,6 +10,7 @@ import ProfilePage from './pages/ProfilePage';
 import SettingsPage from './pages/SettingsPage';
 import PostEmbedPage from './pages/PostEmbedPage';
 import InvitationsPage from './pages/InvitationsPage';
+import GroupFeedPage from './pages/GroupFeedPage';
 
 // Components
 import Layout from './components/Layout';
@@ -127,6 +128,7 @@ function App() {
                 <Route path="/shorts" element={<ShortsPage />} />
                 <Route path="/messenger" element={<MessengerPage />} />
                 <Route path="/profile/:userId" element={<ProfilePage />} />
+                <Route path="/group/:groupId" element={<GroupFeedPage />} />
                 <Route path="/settings" element={<SettingsPage />} />
                 <Route path="/invitations" element={<InvitationsPage />} />
                 <Route path="*" element={<Navigate to="/" replace />} />

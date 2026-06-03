@@ -1,14 +1,16 @@
-import { Calendar, Code, Copy, Heart, Image as ImageIcon, MapPin, MessageSquare, Mic, MoreHorizontal, Send, Share2, X } from 'lucide-react';
+import { Calendar, Code, Copy, Heart, Image as ImageIcon, MapPin, MessageSquare, Mic, MoreHorizontal, Send, Share2, X, UserPlus } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { toast } from 'react-hot-toast';
-import { useNavigate } from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 import { supabase } from '../services/supabase';
 import { formatCount, formatTextWithLinks, formatTimeAgo, uploadToCloudinary } from '../utils/helpers';
 import CustomAudioPlayer from '../components/CustomAudioPlayer';
-import './FeedPage.css';
+import CreatePostModal from '../components/CreatePostModal';
+import './GroupFeedPage.css';
 
-export default function FeedPage() {
+export default function GroupFeedPage() {
+  const { groupId } = useParams();
   const { user, profile } = useAuth();
   const navigate = useNavigate();
   const [posts, setPosts] = useState([]);
@@ -16,6 +18,19 @@ export default function FeedPage() {
   const [newPostContent, setNewPostContent] = useState('');
   const [selectedImages, setSelectedImages] = useState([]);
   const [isPublishing, setIsPublishing] = useState(false);
+  const [group, setGroup] = useState(null);
+  const [groupMembers, setGroupMembers] = useState([]);
+  const [adminActionUser, setAdminActionUser] = useState(null);
+
+  // Edit Group State
+  const [isEditGroupModalOpen, setIsEditGroupModalOpen] = useState(false);
+  const [editGroupName, setEditGroupName] = useState('');
+  const [editGroupDescription, setEditGroupDescription] = useState('');
+  const [editGroupAvatar, setEditGroupAvatar] = useState('');
+  const [isUpdatingGroup, setIsUpdatingGroup] = useState(false);
+
+  // Group Post Modal State
+  const [isGroupPostModalOpen, setIsGroupPostModalOpen] = useState(false);
 
   // Edit/Delete Post State
   const [editingPost, setEditingPost] = useState(null);
@@ -55,11 +70,13 @@ export default function FeedPage() {
   const [lightboxIndex, setLightboxIndex] = useState(0);
 
   useEffect(() => {
+    if (!groupId) return;
+    fetchGroupDetails();
     fetchPosts();
 
     const subscription = supabase
-      .channel('public:posts')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'posts' }, payload => {
+      .channel(`public:posts:group_${groupId}`)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'posts', filter: `group_id=eq.${groupId}` }, payload => {
         if (payload.eventType === 'INSERT') {
           fetchSinglePost(payload.new.id);
         } else if (payload.eventType === 'UPDATE') {
@@ -73,7 +90,49 @@ export default function FeedPage() {
     return () => {
       supabase.removeChannel(subscription);
     };
-  }, []);
+  }, [groupId]);
+
+  const fetchGroupDetails = async () => {
+    try {
+      const { data: gData, error: gError } = await supabase.from('groups').select('*').eq('id', groupId).single();
+      if (gError) throw gError;
+      setGroup(gData);
+
+      const { data: mData } = await supabase.from('group_members').select('user_id, role').eq('group_id', groupId);
+      if (mData) setGroupMembers(mData);
+    } catch (e) {
+      console.error(e);
+      toast.error('Groupe introuvable');
+      navigate('/');
+    }
+  };
+
+  const handleUpdateGroup = async () => {
+    if (!editGroupName.trim()) return toast.error('Le nom du groupe est requis.');
+    setIsUpdatingGroup(true);
+    try {
+      const { data, error } = await supabase
+        .from('groups')
+        .update({
+          name: editGroupName.trim(),
+          description: editGroupDescription.trim(),
+          avatar_url: editGroupAvatar.trim()
+        })
+        .eq('id', groupId)
+        .select()
+        .single();
+      
+      if (error) throw error;
+      setGroup(data);
+      setIsEditGroupModalOpen(false);
+      toast.success('Groupe mis à jour avec succès.');
+    } catch (err) {
+      console.error(err);
+      toast.error('Erreur lors de la mise à jour du groupe.');
+    } finally {
+      setIsUpdatingGroup(false);
+    }
+  };
 
   // Handle keyboard shortcuts for lightbox
   useEffect(() => {
@@ -109,17 +168,16 @@ export default function FeedPage() {
         .select(`
           *,
           profiles (id, first_name, last_name, username, avatar_url, is_verified, is_ambassador),
-          groups (id, name),
           comments(count),
           likes(count)
         `)
+        .eq('group_id', groupId)
         .order('created_at', { ascending: false });
 
       if (error) throw error;
       setPosts(data || []);
     } catch (err) {
       console.error('Error fetching posts:', err);
-      toast.error('Erreur: ' + (err.message || 'Impossible de charger les posts'));
     } finally {
       setLoading(false);
     }
@@ -128,7 +186,7 @@ export default function FeedPage() {
   const fetchSinglePost = async (id) => {
     const { data } = await supabase
       .from('posts')
-      .select('*, profiles (id, first_name, last_name, username, avatar_url, is_verified, is_ambassador), groups (id, name), comments(count), likes(count)')
+      .select('*, profiles (id, first_name, last_name, username, avatar_url, is_verified, is_ambassador), comments(count), likes(count)')
       .eq('id', id)
       .single();
     
@@ -162,6 +220,7 @@ export default function FeedPage() {
       const { error } = await supabase.from('posts').insert({
         content: newPostContent.trim(),
         user_id: user.id,
+        group_id: groupId,
         image_urls: uploadedImageUrls,
         image_url: uploadedImageUrls[0] || ''
       });
@@ -535,6 +594,53 @@ export default function FeedPage() {
     setLightboxIndex(prev => prev === lightboxImages.length - 1 ? 0 : prev + 1);
   };
 
+  const handleAdminActionClick = (profileData) => {
+    if (user?.id === group?.created_by && profileData.id !== user.id) {
+      setAdminActionUser(profileData);
+    } else {
+      handleOpenProfile(profileData);
+    }
+  };
+
+  const handleRemoveFromGroup = async (userId) => {
+    if (!window.confirm("Voulez-vous vraiment retirer cet utilisateur du groupe ?")) return;
+    try {
+      const { error } = await supabase.from('group_members').delete().eq('group_id', groupId).eq('user_id', userId);
+      if (error) throw error;
+      toast.success("Utilisateur retiré du groupe.");
+      setGroupMembers(prev => prev.filter(m => m.user_id !== userId));
+      setAdminActionUser(null);
+    } catch (e) {
+      toast.error("Erreur lors de la suppression du membre.");
+    }
+  };
+
+  const isMember = user && groupMembers.some(m => m.user_id === user.id);
+
+  const handleJoinGroup = async () => {
+    if (!user) return toast.error('Connectez-vous pour rejoindre ce groupe.');
+    try {
+      const { error } = await supabase.from('group_members').insert({
+        group_id: groupId,
+        user_id: user.id,
+        role: 'member',
+        added_by: user.id
+      });
+      if (error) throw error;
+      setGroupMembers(prev => [...prev, { user_id: user.id, role: 'member' }]);
+      toast.success('Vous avez rejoint le groupe !');
+    } catch (e) {
+      console.error(e);
+      toast.error('Impossible de rejoindre le groupe.');
+    }
+  };
+
+  const handleInviteToGroup = () => {
+    const inviteLink = `${window.location.origin}/group/${groupId}`;
+    navigator.clipboard.writeText(inviteLink);
+    toast.success("Lien d'invitation copié dans le presse-papier !");
+  };
+
   const handleOpenProfile = async (profileData) => {
     if (!profileData?.id) return;
     setProfilePanelLoading(true);
@@ -574,32 +680,97 @@ export default function FeedPage() {
 
   return (
     <div className="feed-page">
-      <div className="feed-header">
-        <h1 className="font-black">Accueil</h1>
-      </div>
-      
-      <div className="feed-content">
-        <div className="composer glass cursor-pointer transition-transform hover:scale-[1.01]" onClick={() => window.dispatchEvent(new Event('openCreatePostModal'))} style={{ padding: '1.25rem' }}>
-          <div className="composer-input-area pointer-events-none mb-0">
-            <img 
-              src={profile?.avatar_url || 'https://static.vecteezy.com/system/resources/thumbnails/004/607/791/small_2x/man-face-emotive-icon-smiling-male-character-in-blue-shirt-flat-illustration-isolated-on-white-happy-human-psychological-portrait-positive-emotions-user-avatar-for-app-web-design-vector.jpg'} 
-              alt="Avatar" 
-              className="avatar"
-            />
-            <div className="composer-textarea flex items-center text-secondary bg-transparent border-none outline-none" style={{ height: '48px', fontSize: '1.1rem' }}>
-              Quoi de neuf ?
-            </div>
-          </div>
-          <div className="composer-actions pointer-events-none mt-2 pt-3 border-t border-white/10">
-            <div className="composer-tools">
-              <div className="flex items-center gap-2">
-                <div className="w-9 h-9 rounded-full bg-white/5 flex items-center justify-center text-primary"><ImageIcon size={18} /></div>
-                <div className="w-9 h-9 rounded-full bg-white/5 flex items-center justify-center text-primary"><Mic size={18} /></div>
+      <div className="feed-container">
+        
+        {/* Group Header */}
+        {group && (
+          <div className="group-header glass" style={{ marginBottom: '1.5rem', borderRadius: '16px', overflow: 'hidden' }}>
+            <div className="group-cover" style={{ height: '150px', background: 'linear-gradient(135deg, #7c3aed, #5b21b6)', position: 'relative' }}>
+              <div style={{ position: 'absolute', top: '1rem', right: '1rem', display: 'flex', gap: '0.5rem' }}>
+                {user?.id === group.created_by && (
+                  <button 
+                    className="btn btn-secondary" 
+                    style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontWeight: 'bold' }}
+                    onClick={() => {
+                      setEditGroupName(group.name || '');
+                      setEditGroupDescription(group.description || '');
+                      setEditGroupAvatar(group.avatar_url || '');
+                      setIsEditGroupModalOpen(true);
+                    }}
+                  >
+                    ✏️ Modifier
+                  </button>
+                )}
+                {isMember ? (
+                  <button 
+                    className="btn btn-primary" 
+                    style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontWeight: 'bold' }}
+                    onClick={handleInviteToGroup}
+                  >
+                    <UserPlus size={18} /> Inviter
+                  </button>
+                ) : (
+                  <button 
+                    className="btn btn-primary" 
+                    style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontWeight: 'bold', background: 'linear-gradient(135deg, #10b981, #059669)', border: 'none' }}
+                    onClick={handleJoinGroup}
+                  >
+                    <UserPlus size={18} /> Rejoindre le groupe
+                  </button>
+                )}
               </div>
             </div>
-            <button className="btn btn-primary px-5 py-1.5 rounded-full font-semibold shadow-lg">Créer</button>
+            <div className="group-info" style={{ padding: '1.5rem', display: 'flex', alignItems: 'flex-start', gap: '1rem', position: 'relative' }}>
+              <img src={group.avatar_url || 'https://static.vecteezy.com/system/resources/thumbnails/004/607/791/small_2x/man-face-emotive-icon-smiling-male-character-in-blue-shirt-flat-illustration-isolated-on-white-happy-human-psychological-portrait-positive-emotions-user-avatar-for-app-web-design-vector.jpg'} alt={group.name} style={{ width: '80px', height: '80px', borderRadius: '16px', border: '4px solid var(--bg-color)', marginTop: '-50px', objectFit: 'cover' }} />
+              <div style={{ flex: 1 }}>
+                <h1 style={{ margin: 0, fontSize: '1.5rem', fontWeight: '900' }}>{group.name}</h1>
+                <p style={{ margin: '0.5rem 0 0', color: 'var(--text-secondary)', fontSize: '0.9rem', whiteSpace: 'pre-wrap' }}>{group.description}</p>
+                <div style={{ marginTop: '0.5rem', fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
+                  {groupMembers.length} membre{groupMembers.length > 1 ? 's' : ''}
+                  {!isMember && <span style={{ marginLeft: '0.5rem', color: '#f59e0b', fontWeight: '600' }}>• Vous n'êtes pas membre</span>}
+                </div>
+              </div>
+            </div>
           </div>
-        </div>
+        )}
+      
+      <div className="feed-content">
+        {isMember ? (
+          <div className="composer glass cursor-pointer transition-transform hover:scale-[1.01]" onClick={() => setIsGroupPostModalOpen(true)} style={{ padding: '1.25rem' }}>
+            <div className="composer-input-area pointer-events-none mb-0">
+              <img 
+                src={profile?.avatar_url || 'https://static.vecteezy.com/system/resources/thumbnails/004/607/791/small_2x/man-face-emotive-icon-smiling-male-character-in-blue-shirt-flat-illustration-isolated-on-white-happy-human-psychological-portrait-positive-emotions-user-avatar-for-app-web-design-vector.jpg'} 
+                alt="Avatar" 
+                className="avatar"
+              />
+              <div className="composer-textarea flex items-center text-secondary bg-transparent border-none outline-none" style={{ height: '48px', fontSize: '1.1rem' }}>
+                Quoi de neuf ?
+              </div>
+            </div>
+            <div className="composer-actions pointer-events-none mt-2 pt-3 border-t border-white/10">
+              <div className="composer-tools">
+                <div className="flex items-center gap-2">
+                  <div className="w-9 h-9 rounded-full bg-white/5 flex items-center justify-center text-primary"><ImageIcon size={18} /></div>
+                  <div className="w-9 h-9 rounded-full bg-white/5 flex items-center justify-center text-primary"><Mic size={18} /></div>
+                </div>
+              </div>
+              <button className="btn btn-primary px-5 py-1.5 rounded-full font-semibold shadow-lg">Créer</button>
+            </div>
+          </div>
+        ) : (
+          <div className="glass" style={{ padding: '1.5rem', borderRadius: '16px', textAlign: 'center', marginBottom: '1rem' }}>
+            <p style={{ margin: '0 0 1rem', color: 'var(--text-secondary)', fontSize: '0.95rem' }}>
+              Rejoignez ce groupe pour publier et interagir avec les membres.
+            </p>
+            <button 
+              className="btn btn-primary" 
+              style={{ background: 'linear-gradient(135deg, #10b981, #059669)', border: 'none', fontWeight: 'bold', padding: '0.6rem 1.5rem' }}
+              onClick={handleJoinGroup}
+            >
+              <UserPlus size={18} style={{ display: 'inline', marginRight: '0.4rem', verticalAlign: 'middle' }} /> Rejoindre le groupe
+            </button>
+          </div>
+        )}
 
         <div className="posts-container">
           {loading ? (
@@ -631,39 +802,29 @@ export default function FeedPage() {
                     alt="Avatar" 
                     className="avatar clickable-avatar"
                     onError={(e) => e.target.src = 'https://static.vecteezy.com/system/resources/thumbnails/004/607/791/small_2x/man-face-emotive-icon-smiling-male-character-in-blue-shirt-flat-illustration-isolated-on-white-happy-human-psychological-portrait-positive-emotions-user-avatar-for-app-web-design-vector.jpg'}
-                    onClick={() => handleOpenProfile(post.profiles)}
+                    onClick={() => handleAdminActionClick(post.profiles)}
                   />
                   <div className="post-meta">
-                    <div className="post-author-name font-bold flex items-center gap-1">
+                    <div className="post-author flex items-center gap-2">
                       <span 
                         className="username-link"
-                        onClick={() => handleOpenProfile(post.profiles)}
+                        onClick={() => handleAdminActionClick(post.profiles)}
                       >
                         {post.profiles?.first_name} {post.profiles?.last_name}
                       </span>
+                      {post.user_id === group?.created_by && (
+                        <span className="text-xs font-bold" style={{ background: 'linear-gradient(135deg, var(--primary-color), #8b5cf6)', color: 'white', padding: '0.1rem 0.4rem', borderRadius: '4px' }}>Admin</span>
+                      )}
                       {post.profiles?.is_verified && (
                         <span className="text-primary" title="Vérifié">✓</span>
                       )}
                     </div>
                     <div className="post-time text-secondary text-sm">
-                      <span className="username-handle" onClick={() => handleOpenProfile(post.profiles)}>
+                      <span className="username-handle" onClick={() => handleAdminActionClick(post.profiles)}>
                         @{post.profiles?.username}
                       </span>
                       {' '}• {formatTimeAgo(post.created_at)}
                     </div>
-                    {post.group_id && post.groups && (
-                      <div className="post-group-origin" style={{ marginTop: '2px', fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
-                        Posté depuis{' '}
-                        <span 
-                          onClick={() => navigate(`/group/${post.groups.id}`)}
-                          style={{ color: 'var(--primary-color)', cursor: 'pointer', fontWeight: '600', textDecoration: 'none' }}
-                          onMouseEnter={(e) => e.target.style.textDecoration = 'underline'}
-                          onMouseLeave={(e) => e.target.style.textDecoration = 'none'}
-                        >
-                          {post.groups.name}
-                        </span>
-                      </div>
-                    )}
                   </div>
                   
                   <div className="relative">
@@ -1177,6 +1338,89 @@ export default function FeedPage() {
           </div>
         </>
       )}
+      {adminActionUser && (
+        <div className="modal-overlay" onClick={() => setAdminActionUser(null)} style={{ zIndex: 11000 }}>
+          <div className="glass rounded-xl p-4 w-[90%] max-w-sm flex flex-col items-stretch gap-2" onClick={e => e.stopPropagation()}>
+            <h3 className="font-bold text-center mb-2">{adminActionUser.first_name} {adminActionUser.last_name}</h3>
+            <button className="btn btn-primary w-full" onClick={() => { setAdminActionUser(null); handleOpenProfile(adminActionUser); }}>
+              Voir le profil
+            </button>
+            <button className="btn w-full" style={{ background: 'rgba(239, 68, 68, 0.2)', color: '#ef4444' }} onClick={() => handleRemoveFromGroup(adminActionUser.id)}>
+              Supprimer du groupe
+            </button>
+            <button className="btn btn-outline w-full mt-2" onClick={() => setAdminActionUser(null)}>Annuler</button>
+          </div>
+        </div>
+      )}
+
+      {isEditGroupModalOpen && (
+        <div className="create-post-overlay" onClick={() => !isUpdatingGroup && setIsEditGroupModalOpen(false)} style={{ zIndex: 12000 }}>
+          <div className="create-post-modal" onClick={e => e.stopPropagation()} style={{ maxWidth: '500px' }}>
+            <div className="create-post-header">
+              <div className="create-post-title">
+                <h3 style={{ fontSize: '1.2rem' }}>Modifier le groupe</h3>
+              </div>
+              <button className="create-post-close-btn" onClick={() => setIsEditGroupModalOpen(false)}>
+                <X size={20} />
+              </button>
+            </div>
+
+            <div className="create-post-body">
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+                <div>
+                  <label style={{ fontSize: '0.9rem', color: 'var(--text-secondary)', fontWeight: 'bold', marginBottom: '0.5rem', display: 'block' }}>Nom du groupe</label>
+                  <input 
+                    type="text" 
+                    style={{ width: '100%', background: 'rgba(255, 255, 255, 0.05)', border: '1px solid rgba(255, 255, 255, 0.1)', borderRadius: '12px', padding: '0.75rem 1rem', color: 'white', outline: 'none' }}
+                    value={editGroupName}
+                    onChange={(e) => setEditGroupName(e.target.value)}
+                    placeholder="Nom du groupe"
+                  />
+                </div>
+
+                <div>
+                  <label style={{ fontSize: '0.9rem', color: 'var(--text-secondary)', fontWeight: 'bold', marginBottom: '0.5rem', display: 'block' }}>Description</label>
+                  <textarea 
+                    style={{ width: '100%', background: 'rgba(255, 255, 255, 0.05)', border: '1px solid rgba(255, 255, 255, 0.1)', borderRadius: '12px', padding: '0.75rem 1rem', color: 'white', outline: 'none', resize: 'none' }}
+                    rows="3"
+                    value={editGroupDescription}
+                    onChange={(e) => setEditGroupDescription(e.target.value)}
+                    placeholder="Description du groupe"
+                  />
+                </div>
+
+                <div>
+                  <label style={{ fontSize: '0.9rem', color: 'var(--text-secondary)', fontWeight: 'bold', marginBottom: '0.5rem', display: 'block' }}>Lien de l'image de profil (URL)</label>
+                  <input 
+                    type="text" 
+                    style={{ width: '100%', background: 'rgba(255, 255, 255, 0.05)', border: '1px solid rgba(255, 255, 255, 0.1)', borderRadius: '12px', padding: '0.75rem 1rem', color: 'white', outline: 'none' }}
+                    value={editGroupAvatar}
+                    onChange={(e) => setEditGroupAvatar(e.target.value)}
+                    placeholder="https://..."
+                  />
+                </div>
+              </div>
+            </div>
+
+            <div className="create-post-footer" style={{ justifyContent: 'flex-end', gap: '1rem' }}>
+              <button className="btn btn-outline" onClick={() => setIsEditGroupModalOpen(false)} disabled={isUpdatingGroup} style={{ padding: '0.6rem 1.5rem', borderRadius: '100px' }}>
+                Annuler
+              </button>
+              <button className="create-post-publish-btn" onClick={handleUpdateGroup} disabled={isUpdatingGroup || !editGroupName.trim()} style={{ padding: '0.6rem 1.5rem' }}>
+                {isUpdatingGroup ? 'Enregistrement...' : 'Enregistrer'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      <CreatePostModal 
+        isOpen={isGroupPostModalOpen} 
+        onClose={() => setIsGroupPostModalOpen(false)} 
+        groupId={groupId} 
+      />
+
+      </div>
     </div>
   );
 }
