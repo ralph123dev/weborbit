@@ -1,4 +1,4 @@
-import { Calendar, Code, Copy, Heart, Image as ImageIcon, MapPin, MessageSquare, Mic, MoreHorizontal, Send, Share2, X, UserPlus } from 'lucide-react';
+import { Calendar, Code, Copy, Heart, Image as ImageIcon, MapPin, MessageSquare, Mic, MoreHorizontal, Send, Share2, X, UserPlus, Lock, Unlock, AlertTriangle } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { toast } from 'react-hot-toast';
 import { useParams, useNavigate } from 'react-router-dom';
@@ -31,6 +31,7 @@ export default function GroupFeedPage() {
 
   // Group Post Modal State
   const [isGroupPostModalOpen, setIsGroupPostModalOpen] = useState(false);
+  const [isShareGroupModalOpen, setIsShareGroupModalOpen] = useState(false);
 
   // Edit/Delete Post State
   const [editingPost, setEditingPost] = useState(null);
@@ -98,8 +99,38 @@ export default function GroupFeedPage() {
       if (gError) throw gError;
       setGroup(gData);
 
-      const { data: mData } = await supabase.from('group_members').select('user_id, role').eq('group_id', groupId);
-      if (mData) setGroupMembers(mData);
+      const { data: mData, error: mError } = await supabase
+        .from('group_members')
+        .select('user_id, role')
+        .eq('group_id', groupId);
+      
+      if (mError) throw mError;
+
+      if (mData && mData.length > 0) {
+        const userIds = mData.map(m => m.user_id);
+        const { data: pData, error: pError } = await supabase
+          .from('profiles')
+          .select('id, avatar_url, first_name, last_name, username')
+          .in('id', userIds);
+
+        if (pError) console.error('Error fetching member profiles:', pError);
+
+        const profileMap = {};
+        if (pData) {
+          pData.forEach(p => {
+            profileMap[p.id] = p;
+          });
+        }
+
+        const enrichedMembers = mData.map(m => ({
+          ...m,
+          profiles: profileMap[m.user_id] || null
+        }));
+
+        setGroupMembers(enrichedMembers);
+      } else {
+        setGroupMembers([]);
+      }
     } catch (e) {
       console.error(e);
       toast.error('Groupe introuvable');
@@ -615,7 +646,7 @@ export default function GroupFeedPage() {
     }
   };
 
-  const isMember = user && groupMembers.some(m => m.user_id === user.id);
+  const isMember = user && group && (group.created_by === user.id || groupMembers.some(m => m.user_id === user.id));
 
   const handleJoinGroup = async () => {
     if (!user) return toast.error('Connectez-vous pour rejoindre ce groupe.');
@@ -720,15 +751,84 @@ export default function GroupFeedPage() {
                 )}
               </div>
             </div>
-            <div className="group-info" style={{ padding: '1.5rem', display: 'flex', alignItems: 'flex-start', gap: '1rem', position: 'relative' }}>
-              <img src={group.avatar_url || 'https://static.vecteezy.com/system/resources/thumbnails/004/607/791/small_2x/man-face-emotive-icon-smiling-male-character-in-blue-shirt-flat-illustration-isolated-on-white-happy-human-psychological-portrait-positive-emotions-user-avatar-for-app-web-design-vector.jpg'} alt={group.name} style={{ width: '80px', height: '80px', borderRadius: '16px', border: '4px solid var(--bg-color)', marginTop: '-50px', objectFit: 'cover' }} />
-              <div style={{ flex: 1 }}>
-                <h1 style={{ margin: 0, fontSize: '1.5rem', fontWeight: '900' }}>{group.name}</h1>
-                <p style={{ margin: '0.5rem 0 0', color: 'var(--text-secondary)', fontSize: '0.9rem', whiteSpace: 'pre-wrap' }}>{group.description}</p>
-                <div style={{ marginTop: '0.5rem', fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
-                  {groupMembers.length} membre{groupMembers.length > 1 ? 's' : ''}
-                  {!isMember && <span style={{ marginLeft: '0.5rem', color: '#f59e0b', fontWeight: '600' }}>• Vous n'êtes pas membre</span>}
+            <div className="group-info" style={{ padding: '2rem', display: 'flex', alignItems: 'flex-start', gap: '2rem', position: 'relative' }}>
+              {group.avatar_url && (
+                <img 
+                  src={group.avatar_url} 
+                  alt="Group Profile" 
+                  style={{ 
+                    width: '100px', 
+                    height: '100px', 
+                    borderRadius: '20px', 
+                    objectFit: 'cover', 
+                    marginTop: '-5rem', 
+                    border: '4px solid var(--bg-color-alt)',
+                    boxShadow: '0 8px 24px rgba(0,0,0,0.3)',
+                    position: 'relative',
+                    zIndex: 2
+                  }} 
+                />
+              )}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', flex: 1 }}>
+                <h1 style={{ margin: 0, fontSize: '2.2rem', fontWeight: '800', color: 'white', letterSpacing: '-0.5px' }}>{group.name}</h1>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: '#9ca3af', fontSize: '1rem' }}>
+                  {group.type === 'private' ? <Lock size={16} /> : <Unlock size={16} />} 
+                  <span>Groupe ({group.type === 'private' ? 'Privé' : 'Public'}) · {groupMembers.length} membre{groupMembers.length > 1 ? 's' : ''}</span>
                 </div>
+                
+                {groupMembers.length > 0 && (
+                  <div style={{ display: 'flex', alignItems: 'center', marginTop: '0.5rem' }}>
+                    {groupMembers.slice(0, 20).map((m, idx) => (
+                      <img 
+                        key={m.user_id} 
+                        src={m.profiles?.avatar_url || 'https://static.vecteezy.com/system/resources/thumbnails/004/607/791/small_2x/man-face-emotive-icon-smiling-male-character-in-blue-shirt-flat-illustration-isolated-on-white-happy-human-psychological-portrait-positive-emotions-user-avatar-for-app-web-design-vector.jpg'} 
+                        alt="Membre" 
+                        style={{ 
+                          width: '36px', height: '36px', borderRadius: '50%', border: '2px solid #1a1a2e', 
+                          marginLeft: idx === 0 ? '0' : '-12px', zIndex: 20 - idx, objectFit: 'cover' 
+                        }} 
+                        title={m.profiles?.first_name ? `${m.profiles.first_name} ${m.profiles.last_name}` : 'Membre'}
+                      />
+                    ))}
+                  </div>
+                )}
+                
+                {group.description && (
+                  <p style={{ margin: '1rem 0 0', color: 'var(--text-secondary)', fontSize: '0.95rem', whiteSpace: 'pre-wrap', maxWidth: '700px', lineHeight: '1.5' }}>
+                    {group.description}
+                  </p>
+                )}
+                
+                {!isMember && <span style={{ color: '#f59e0b', fontWeight: '600', fontSize: '0.9rem', marginTop: '0.5rem' }}>• Vous n'êtes pas membre</span>}
+              </div>
+
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginTop: '0.5rem' }}>
+                {isMember ? (
+                  <button 
+                    className="btn" 
+                    style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontWeight: '600', padding: '0.6rem 1.25rem', borderRadius: '8px', background: '#5b21b6', color: 'white', border: 'none' }}
+                    onClick={handleInviteToGroup}
+                  >
+                    + Inviter
+                  </button>
+                ) : (
+                  <button 
+                    className="btn" 
+                    style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontWeight: '600', padding: '0.6rem 1.25rem', borderRadius: '8px', background: 'linear-gradient(135deg, #10b981, #059669)', color: 'white', border: 'none' }}
+                    onClick={handleJoinGroup}
+                  >
+                    + Rejoindre
+                  </button>
+                )}
+                <button 
+                  className="btn" 
+                  style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontWeight: '600', padding: '0.6rem 1.25rem', borderRadius: '8px', background: 'rgba(255,255,255,0.1)', color: 'white', border: 'none', transition: 'background 0.2s' }}
+                  onClick={() => setIsShareGroupModalOpen(true)}
+                  onMouseOver={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.15)'}
+                  onMouseOut={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.1)'}
+                >
+                  <Share2 size={18} style={{ transform: 'scaleX(-1)' }} /> Partager
+                </button>
               </div>
             </div>
           </div>
@@ -1419,6 +1519,63 @@ export default function GroupFeedPage() {
         onClose={() => setIsGroupPostModalOpen(false)} 
         groupId={groupId} 
       />
+
+      {isShareGroupModalOpen && (
+        <div className="modal-overlay" onClick={() => setIsShareGroupModalOpen(false)} style={{ zIndex: 13000 }}>
+          <div className="share-modal glass" onClick={(e) => e.stopPropagation()} style={{ width: '90%', maxWidth: '400px' }}>
+            <div className="share-header">
+              <h3 className="font-bold text-lg">🔗 Partager le groupe</h3>
+              <button className="icon-btn" onClick={() => setIsShareGroupModalOpen(false)}><X size={20} /></button>
+            </div>
+            
+            <div className="share-body" style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', padding: '1rem 0' }}>
+              <button className="share-action-btn" onClick={() => {
+                navigator.clipboard.writeText(`${window.location.origin}/group/${groupId}`);
+                toast.success('Lien copié !');
+                setIsShareGroupModalOpen(false);
+              }} style={{ display: 'flex', alignItems: 'center', gap: '1rem', padding: '1rem', width: '100%', background: 'rgba(255,255,255,0.05)', borderRadius: '12px', border: 'none', color: 'white', cursor: 'pointer', textAlign: 'left' }}>
+                <div style={{ width: '40px', height: '40px', borderRadius: '50%', background: 'var(--primary-color)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <Copy size={20} color="white" />
+                </div>
+                <div>
+                  <div style={{ fontWeight: 'bold' }}>Copier le lien</div>
+                  <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>Partager le lien direct du groupe</div>
+                </div>
+              </button>
+
+              <button className="share-action-btn" onClick={() => {
+                const code = `<iframe src="${window.location.origin}/group/${groupId}?embed=true" width="100%" height="600" frameborder="0"></iframe>`;
+                navigator.clipboard.writeText(code);
+                toast.success('Code d\'intégration copié !');
+                setIsShareGroupModalOpen(false);
+              }} style={{ display: 'flex', alignItems: 'center', gap: '1rem', padding: '1rem', width: '100%', background: 'rgba(255,255,255,0.05)', borderRadius: '12px', border: 'none', color: 'white', cursor: 'pointer', textAlign: 'left' }}>
+                <div style={{ width: '40px', height: '40px', borderRadius: '50%', background: '#f59e0b', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <Code size={20} color="white" />
+                </div>
+                <div>
+                  <div style={{ fontWeight: 'bold' }}>Intégrer (Embed)</div>
+                  <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>Obtenir le code HTML</div>
+                </div>
+              </button>
+
+              {user?.id !== group?.created_by && (
+                <button className="share-action-btn" onClick={() => {
+                  toast.success('Signalement envoyé aux administrateurs.');
+                  setIsShareGroupModalOpen(false);
+                }} style={{ display: 'flex', alignItems: 'center', gap: '1rem', padding: '1rem', width: '100%', background: 'rgba(255,255,255,0.05)', borderRadius: '12px', border: 'none', color: 'white', cursor: 'pointer', textAlign: 'left', marginTop: '0.5rem' }}>
+                  <div style={{ width: '40px', height: '40px', borderRadius: '50%', background: '#ef4444', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <AlertTriangle size={20} color="white" />
+                  </div>
+                  <div>
+                    <div style={{ fontWeight: 'bold', color: '#ef4444' }}>Signaler le groupe</div>
+                    <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>Contenu inapproprié ou spam</div>
+                  </div>
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
 
       </div>
     </div>

@@ -1,13 +1,24 @@
+import {
+  Bell,
+  ChevronRight,
+  DollarSign,
+  Globe,
+  ImageMinus,
+  Lock,
+  LogOut,
+  MapPin,
+  Moon,
+  Palette,
+  Sun,
+  UserCircle,
+  UserMinus,
+  Video
+} from 'lucide-react';
 import { useState } from 'react';
-import { useTheme } from '../hooks/useTheme';
 import { useAuth } from '../hooks/useAuth';
+import { useTheme } from '../hooks/useTheme';
 import { supabase } from '../services/supabase';
 import { uploadToCloudinary } from '../utils/helpers';
-import { 
-  Moon, Sun, Globe, 
-  UserCircle, Bell, Palette, Lock, MapPin, ImageMinus, 
-  UserMinus, LogOut, DollarSign, ChevronRight, Video
-} from 'lucide-react';
 import './SettingsPage.css';
 
 export default function SettingsPage() {
@@ -26,8 +37,6 @@ export default function SettingsPage() {
   // Images
   const [avatarFile, setAvatarFile] = useState(null);
   const [avatarPreview, setAvatarPreview] = useState(profile?.avatar_url || '');
-  const [coverFile, setCoverFile] = useState(null);
-  const [coverPreview, setCoverPreview] = useState(profile?.cover_url || '');
   
   const [saving, setSaving] = useState(false);
 
@@ -77,14 +86,9 @@ export default function SettingsPage() {
     setSaving(true);
     try {
       let finalAvatarUrl = profile?.avatar_url || '';
-      let finalCoverUrl = profile?.cover_url || '';
 
       if (avatarFile) {
         finalAvatarUrl = await uploadToCloudinary(avatarFile);
-      }
-      
-      if (coverFile) {
-        finalCoverUrl = await uploadToCloudinary(coverFile);
       }
 
       const updates = {
@@ -96,27 +100,16 @@ export default function SettingsPage() {
         avatar_url: finalAvatarUrl,
         updated_at: new Date().toISOString()
       };
-
-      // Only add cover_url to updates if we actually have one or if the user specifically added it
-      // This prevents errors if the cover_url column is not yet created in Supabase
-      if (finalCoverUrl !== '' || profile?.cover_url !== undefined) {
-        updates.cover_url = finalCoverUrl;
-      }
       
       const { error } = await supabase.from('profiles').update(updates).eq('id', user.id);
       
       if (error) {
-        if (error.message.includes('cover_url')) {
-          alert("⚠️ Erreur : La colonne 'cover_url' n'existe pas encore dans votre base de données Supabase. Veuillez l'ajouter dans la table 'profiles'.");
-          return;
-        }
         throw error;
       }
       
       setProfile(prev => ({ ...prev, ...updates }));
       setShowProfileEditor(false);
       setAvatarFile(null);
-      setCoverFile(null);
       alert('Profil mis à jour avec succès !');
     } catch (err) {
       console.error(err);
@@ -243,27 +236,6 @@ export default function SettingsPage() {
                   </label>
                 </div>
                 
-                <div className="flex-1">
-                  <label className="text-sm font-bold block mb-2">Photo de couverture</label>
-                  <label className="cursor-pointer block">
-                    <div className="w-full h-20 rounded-xl overflow-hidden bg-surface-hover flex items-center justify-center border-2 border-primary border-dashed">
-                      {coverPreview ? (
-                        <img src={coverPreview} alt="Cover" className="w-full h-full object-cover" />
-                      ) : (
-                        <span className="text-xs text-secondary">Ajouter</span>
-                      )}
-                    </div>
-                    <input 
-                      type="file" accept="image/*" className="hidden"
-                      onChange={e => {
-                        if (e.target.files[0]) {
-                          setCoverFile(e.target.files[0]);
-                          setCoverPreview(URL.createObjectURL(e.target.files[0]));
-                        }
-                      }}
-                    />
-                  </label>
-                </div>
               </div>
 
               <div className="editor-row">

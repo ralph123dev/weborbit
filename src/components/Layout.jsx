@@ -1,16 +1,29 @@
-import { useState, useEffect } from 'react';
-import Sidebar from './Sidebar';
+import { useEffect, useState } from 'react';
 import CreatePostModal from './CreatePostModal';
 import './Layout.css';
+import PublishShortModal from './PublishShortModal';
+import Sidebar from './Sidebar';
 
 export default function Layout({ children }) {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [isPublishShortModalOpen, setIsPublishShortModalOpen] = useState(false);
 
   useEffect(() => {
     const handleOpenModal = () => setIsCreateModalOpen(true);
     window.addEventListener('openCreatePostModal', handleOpenModal);
     return () => window.removeEventListener('openCreatePostModal', handleOpenModal);
+  }, []);
+
+  useEffect(() => {
+    const handleOpenPublishShort = () => setIsPublishShortModalOpen(true);
+    window.addEventListener('open-publish-short-modal', handleOpenPublishShort);
+    return () => window.removeEventListener('open-publish-short-modal', handleOpenPublishShort);
+  }, []);
+
+  useEffect(() => {
+    // sidebar open handled by parent state; legacy listener removed
+    return () => {};
   }, []);
 
   return (
@@ -49,6 +62,12 @@ export default function Layout({ children }) {
       <CreatePostModal 
         isOpen={isCreateModalOpen} 
         onClose={() => setIsCreateModalOpen(false)} 
+      />
+
+      {/* Publish Short Modal */}
+      <PublishShortModal 
+        isOpen={isPublishShortModalOpen} 
+        onClose={() => setIsPublishShortModalOpen(false)} 
       />
     </div>
   );

@@ -1,6 +1,6 @@
 import { Download, Home, LogOut, MessageCircle, PlusCircle, Settings, User, UserPlus, Video } from 'lucide-react';
 import { useEffect, useState } from 'react';
-import { NavLink } from 'react-router-dom';
+import { NavLink, useNavigate } from 'react-router-dom';
 import logo from '../assets/logo.png';
 import notificationSound from '../assets/tir.ogg';
 import { useAuth } from '../hooks/useAuth';
@@ -11,6 +11,7 @@ import './Sidebar.css';
 
 export default function Sidebar({ isOpen, onClose, onCreatePost }) {
   const { user, profile } = useAuth();
+  const navigate = useNavigate();
   const [unreadCount, setUnreadCount] = useState(0);
   const [isGroupMenuOpen, setIsGroupMenuOpen] = useState(false);
   const [isGroupModalOpen, setIsGroupModalOpen] = useState(false);
@@ -61,6 +62,8 @@ export default function Sidebar({ isOpen, onClose, onCreatePost }) {
       supabase.removeChannel(channel);
     };
   }, [user]);
+
+  
 
   const fetchUnreadCount = async () => {
     try {
@@ -114,24 +117,60 @@ export default function Sidebar({ isOpen, onClose, onCreatePost }) {
       </div>
 
       <nav className="sidebar-nav">
+        
         {navItems.map((item) => (
-          <NavLink 
-            key={item.path} 
-            to={item.path} 
-            end={item.path === '/'}
-            className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}
-            onClick={() => {
-              if (window.innerWidth <= 768) onClose();
-            }}
-          >
-            <div className="nav-item-wrapper">
-              <item.icon className="nav-icon" size={24} />
-              {item.label === 'Messenger' && unreadCount > 0 && (
-                <span className="sidebar-dot-badge"></span>
-              )}
-            </div>
-            <span className="nav-label">{item.label}</span>
-          </NavLink>
+          <div key={item.path} style={{ display: 'flex', flexDirection: 'column' }}>
+            <NavLink 
+              to={item.path} 
+              end={item.path === '/'}
+              className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}
+              onClick={() => {
+                if (window.innerWidth <= 768) onClose();
+              }}
+            >
+              <div className="nav-item-wrapper">
+                <item.icon className="nav-icon" size={24} />
+                {item.label === 'Messenger' && unreadCount > 0 && (
+                  <span className="sidebar-dot-badge"></span>
+                )}
+              </div>
+              <span className="nav-label">{item.label}</span>
+            </NavLink>
+            {item.path === '/shorts' && (
+              <button 
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  window.dispatchEvent(new Event('open-publish-short-modal'));
+                  if (window.innerWidth <= 768) onClose();
+                }}
+                className="nav-item publish-short-nav-btn"
+                style={{ 
+                  marginLeft: '2rem', 
+                  padding: '8px 12px', 
+                  fontSize: '0.85rem', 
+                  color: '#c084fc', 
+                  background: 'rgba(168,85,247,0.08)', 
+                  border: '1px dashed rgba(168,85,247,0.3)', 
+                  borderRadius: '8px', 
+                  width: 'calc(100% - 2.5rem)', 
+                  marginTop: '2px', 
+                  marginBottom: '8px',
+                  cursor: 'pointer',
+                  fontWeight: '700',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  textAlign: 'left',
+                  transition: 'background 0.2s'
+                }}
+                onMouseOver={e => e.currentTarget.style.background = 'rgba(168,85,247,0.15)'}
+                onMouseOut={e => e.currentTarget.style.background = 'rgba(168,85,247,0.08)'}
+              >
+                <PlusCircle size={16} /> Publier un Short
+              </button>
+            )}
+          </div>
         ))}
 
         <button

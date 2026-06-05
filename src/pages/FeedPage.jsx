@@ -579,7 +579,13 @@ export default function FeedPage() {
       </div>
       
       <div className="feed-content">
-        <div className="composer glass cursor-pointer transition-transform hover:scale-[1.01]" onClick={() => window.dispatchEvent(new Event('openCreatePostModal'))} style={{ padding: '1.25rem' }}>
+        <div className="composer glass cursor-pointer transition-transform hover:scale-[1.01]" onClick={() => {
+          if (window.innerWidth <= 768) {
+            setShowMobileComposer(true);
+          } else {
+            window.dispatchEvent(new Event('openCreatePostModal'));
+          }
+        }} style={{ padding: '1.25rem' }}>
           <div className="composer-input-area pointer-events-none mb-0">
             <img 
               src={profile?.avatar_url || 'https://static.vecteezy.com/system/resources/thumbnails/004/607/791/small_2x/man-face-emotive-icon-smiling-male-character-in-blue-shirt-flat-illustration-isolated-on-white-happy-human-psychological-portrait-positive-emotions-user-avatar-for-app-web-design-vector.jpg'} 
@@ -587,7 +593,7 @@ export default function FeedPage() {
               className="avatar"
             />
             <div className="composer-textarea flex items-center text-secondary bg-transparent border-none outline-none" style={{ height: '48px', fontSize: '1.1rem' }}>
-              Quoi de neuf ?
+             Postez en Orbit !
             </div>
           </div>
           <div className="composer-actions pointer-events-none mt-2 pt-3 border-t border-white/10">
@@ -1176,6 +1182,114 @@ export default function FeedPage() {
             )}
           </div>
         </>
+      )}
+      {showMobileComposer && (
+        <div className="mobile-composer-overlay" onClick={() => setShowMobileComposer(false)}>
+          <div className="mobile-composer-modal" onClick={e => e.stopPropagation()}>
+            <div className="mobile-composer-header">
+              <button 
+                className="text-secondary hover:text-white"
+                onClick={() => {
+                  setShowMobileComposer(false);
+                  setNewPostContent('');
+                  setSelectedImages([]);
+                }}
+              >
+                Annuler
+              </button>
+              <span className="font-bold">Créer une publication</span>
+              <button 
+                className="btn btn-primary btn-sm px-4 rounded-full font-semibold shadow-lg"
+                onClick={async () => {
+                  if (!newPostContent.trim() && selectedImages.length === 0) return;
+                  setIsPublishing(true);
+                  try {
+                    const uploadedImageUrls = [];
+                    for (const file of selectedImages) {
+                      const url = await uploadToCloudinary(file);
+                      uploadedImageUrls.push(url);
+                    }
+
+                    const { error } = await supabase.from('posts').insert({
+                      content: newPostContent.trim(),
+                      user_id: user.id,
+                      image_urls: uploadedImageUrls,
+                      image_url: uploadedImageUrls[0] || ''
+                    });
+
+                    if (error) throw error;
+                    toast.success('Publication réussie ! 🎉');
+                    setNewPostContent('');
+                    setSelectedImages([]);
+                    setShowMobileComposer(false);
+                  } catch (e) {
+                    console.error('Mobile composer error:', e);
+                    toast.error("Erreur lors de la publication.");
+                  } finally {
+                    setIsPublishing(false);
+                  }
+                }}
+                disabled={isPublishing || (!newPostContent.trim() && selectedImages.length === 0)}
+              >
+                {isPublishing ? 'Publier...' : 'Publier'}
+              </button>
+            </div>
+
+            <div className="flex items-center gap-3 p-4 border-b border-white/5">
+              <img 
+                src={profile?.avatar_url || 'https://static.vecteezy.com/system/resources/thumbnails/004/607/791/small_2x/man-face-emotive-icon-smiling-male-character-in-blue-shirt-flat-illustration-isolated-on-white-happy-human-psychological-portrait-positive-emotions-user-avatar-for-app-web-design-vector.jpg'} 
+                alt="Avatar" 
+                className="avatar w-10 h-10 rounded-full object-cover" 
+              />
+              <div className="flex flex-col">
+                <span className="font-bold text-sm text-white">{profile?.first_name} {profile?.last_name}</span>
+                <span className="text-xs text-secondary">@{profile?.username}</span>
+              </div>
+            </div>
+
+            <textarea 
+              className="mobile-composer-textarea flex-1 p-4 bg-transparent border-none outline-none text-white resize-none"
+              placeholder="Quoi de neuf ?"
+              value={newPostContent}
+              onChange={e => setNewPostContent(e.target.value)}
+              autoFocus
+            />
+
+            {selectedImages.length > 0 && (
+              <div className="mobile-composer-preview-images">
+                {selectedImages.map((file, idx) => (
+                  <div key={idx} className="mobile-preview-image-wrapper">
+                    <img src={URL.createObjectURL(file)} alt="Preview" className="mobile-preview-img" />
+                    <button 
+                      className="remove-img-btn"
+                      onClick={() => setSelectedImages(prev => prev.filter((_, i) => i !== idx))}
+                    >
+                      <X size={12} />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            <div className="mobile-composer-footer">
+              <label className="mobile-composer-tool-btn">
+                <ImageIcon size={20} />
+                <input 
+                  type="file" 
+                  multiple 
+                  accept="image/*" 
+                  style={{ display: 'none' }}
+                  onChange={e => {
+                    if (e.target.files && e.target.files.length > 0) {
+                      const filesArray = Array.from(e.target.files);
+                      setSelectedImages(prev => [...prev, ...filesArray]);
+                    }
+                  }}
+                />
+              </label>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

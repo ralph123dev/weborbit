@@ -1,8 +1,8 @@
-import { X } from 'lucide-react';
+import { X, Search } from 'lucide-react';
 import { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 import { supabase } from '../services/supabase';
-import { useNavigate } from 'react-router-dom';
 import './GroupListModal.css';
 
 export default function GroupListModal({ isOpen, onClose }) {
@@ -10,6 +10,7 @@ export default function GroupListModal({ isOpen, onClose }) {
   const navigate = useNavigate();
   const [groups, setGroups] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [searchTerm, setSearchTerm] = useState('');
 
   useEffect(() => {
     if (!isOpen) return;
@@ -21,14 +22,49 @@ export default function GroupListModal({ isOpen, onClose }) {
     if (!user) return;
     setLoading(true);
     try {
-      const { data, error } = await supabase
+      // Fetch member relationships
+      const { data: memberRelations, error: relError } = await supabase
         .from('group_members')
-        .select('groups(*)')
+        .select('group_id')
         .eq('user_id', user.id);
 
-      if (error) throw error;
+      if (relError) throw relError;
 
-      const gs = (data || []).map((d) => d.groups).filter(Boolean);
+      if (!memberRelations || memberRelations.length === 0) {
+        setGroups([]);
+        setLoading(false);
+        return;
+      }
+
+      const groupIds = memberRelations.map(r => r.group_id);
+
+      // Fetch group details
+      const { data: groupsData, error: groupsError } = await supabase
+        .from('groups')
+        .select('*')
+        .in('id', groupIds);
+
+      if (groupsError) throw groupsError;
+
+      // Fetch all member rows for these groups to count them manually
+      const { data: allMembers, error: membersError } = await supabase
+        .from('group_members')
+        .select('group_id')
+        .in('group_id', groupIds);
+
+      if (membersError) console.error('Error fetching member counts:', membersError);
+
+      // Build a count map: { groupId: memberCount }
+      const countMap = {};
+      (allMembers || []).forEach(m => {
+        countMap[m.group_id] = (countMap[m.group_id] || 0) + 1;
+      });
+
+      const gs = (groupsData || []).map(g => ({
+        ...g,
+        memberCount: countMap[g.id] || 1 // At least 1 (the creator)
+      }));
+
       setGroups(gs);
     } catch (e) {
       console.error('Erreur fetch groups:', e);
@@ -39,6 +75,10 @@ export default function GroupListModal({ isOpen, onClose }) {
   };
 
   if (!isOpen) return null;
+
+  const filteredGroups = groups.filter((g) =>
+    g.name.toLowerCase().includes(searchTerm.toLowerCase())
+  );
 
   return (
     <div className="group-list-overlay" onClick={onClose} role="dialog" aria-modal="true">
@@ -51,15 +91,30 @@ export default function GroupListModal({ isOpen, onClose }) {
         </div>
 
         <div className="group-list-body">
+          <div className="group-search-container">
+            <Search size={18} className="search-icon" />
+            <input
+              type="text"
+              placeholder="Rechercher un groupe..."
+              className="group-search-input"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+            />
+          </div>
+
           {loading && <div className="group-loading">Chargement...</div>}
 
           {!loading && groups.length === 0 && (
             <div className="group-empty">Vous n'êtes membre d'aucun groupe.</div>
           )}
 
-          {!loading && groups.length > 0 && (
+          {!loading && groups.length > 0 && filteredGroups.length === 0 && (
+            <div className="group-empty">Aucun groupe trouvé avec ce nom.</div>
+          )}
+
+          {!loading && filteredGroups.length > 0 && (
             <ul className="groups-list">
-              {groups.map((g) => (
+              {filteredGroups.map((g) => (
                 <li 
                   key={g.id} 
                   className="group-item" 
@@ -73,6 +128,9 @@ export default function GroupListModal({ isOpen, onClose }) {
                   <div className="group-meta">
                     <div className="group-name">{g.name}</div>
                     <div className="group-link">o.me/@{g.link?.replace('o.me/@', '')}</div>
+                    <div style={{ fontSize: '0.8rem', color: 'rgba(255,255,255,0.4)', marginTop: '2px' }}>
+                      {g.memberCount || 0} membre{g.memberCount > 1 ? 's' : ''}
+                    </div>
                   </div>
                 </li>
               ))}

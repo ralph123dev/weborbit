@@ -162,13 +162,13 @@ export default function MessengerPage() {
       
       const { data: sentData } = await supabase
         .from('messages')
-        .select('receiver_id, content, created_at, image_url, profiles!messages_receiver_id_fkey(avatar_url, first_name, last_name, is_verified)')
+        .select('receiver_id, content, created_at, image_url, is_read, sender_id, profiles!messages_receiver_id_fkey(avatar_url, first_name, last_name, is_verified)')
         .eq('sender_id', user.id)
         .order('created_at', { ascending: false });
 
       const { data: recvData } = await supabase
         .from('messages')
-        .select('sender_id, content, created_at, image_url, profiles!messages_sender_id_fkey(avatar_url, first_name, last_name, is_verified)')
+        .select('sender_id, content, created_at, image_url, is_read, receiver_id, profiles!messages_sender_id_fkey(avatar_url, first_name, last_name, is_verified)')
         .eq('receiver_id', user.id)
         .order('created_at', { ascending: false });
 
@@ -177,7 +177,7 @@ export default function MessengerPage() {
       const uniqueUsers = {};
       
       allMessages.forEach(msg => {
-        const isSent = !!msg.receiver_id;
+        const isSent = msg.sender_id === user.id;
         const otherUserId = isSent ? msg.receiver_id : msg.sender_id;
         const otherUserProfile = msg.profiles;
 
@@ -187,10 +187,17 @@ export default function MessengerPage() {
             profile: otherUserProfile,
             last_message: msg.image_url ? '📷 Image' : msg.content,
             created_at: msg.created_at,
+            unreadCount: (!isSent && !msg.is_read) ? 1 : 0
           };
-        } else if (new Date(msg.created_at) > new Date(uniqueUsers[otherUserId].created_at)) {
-          uniqueUsers[otherUserId].last_message = msg.image_url ? '📷 Image' : msg.content;
-          uniqueUsers[otherUserId].created_at = msg.created_at;
+        } else {
+          // Increment unread count if received and unread
+          if (!isSent && !msg.is_read) {
+            uniqueUsers[otherUserId].unreadCount += 1;
+          }
+          if (new Date(msg.created_at) > new Date(uniqueUsers[otherUserId].created_at)) {
+            uniqueUsers[otherUserId].last_message = msg.image_url ? '📷 Image' : msg.content;
+            uniqueUsers[otherUserId].created_at = msg.created_at;
+          }
         }
       });
 
@@ -426,12 +433,32 @@ export default function MessengerPage() {
                     {getProfileName(conv.profile)}
                     {conv.profile?.is_verified && <span className="text-primary text-xs">✓</span>}
                   </div>
-                  <div className="conversation-last-msg text-secondary text-sm truncate">
+                  <div className="conversation-last-msg text-secondary text-sm truncate" style={{ fontWeight: conv.unreadCount > 0 ? '700' : 'normal', color: conv.unreadCount > 0 ? 'white' : 'var(--text-secondary)' }}>
                     {conv.last_message}
                   </div>
                 </div>
-                <div className="conversation-time text-xs text-secondary">
-                  {formatTimeAgo(conv.created_at)}
+                <div className="flex flex-col items-end gap-1" style={{ flexShrink: 0 }}>
+                  <div className="conversation-time text-xs text-secondary">
+                    {formatTimeAgo(conv.created_at)}
+                  </div>
+                  {conv.unreadCount > 0 && (
+                    <span style={{
+                      background: '#ef4444',
+                      color: 'white',
+                      fontSize: '0.75rem',
+                      fontWeight: 'bold',
+                      borderRadius: '50%',
+                      minWidth: '18px',
+                      height: '18px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      padding: '0 4px',
+                      boxShadow: '0 0 10px rgba(239, 68, 68, 0.5)'
+                    }}>
+                      {conv.unreadCount}
+                    </span>
+                  )}
                 </div>
               </div>
             ))

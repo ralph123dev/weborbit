@@ -32,22 +32,38 @@ export function isOnline(lastSeen) {
   return (now - seen) < 120000; // 2 minutes
 }
 
-export async function uploadToCloudinary(file) {
+export async function uploadToCloudinary(file, onProgress) {
   const formData = new FormData();
   formData.append('file', file);
   formData.append('upload_preset', import.meta.env.VITE_CLOUDINARY_UPLOAD_PRESET);
 
-  const res = await fetch(
-    `https://api.cloudinary.com/v1_1/${import.meta.env.VITE_CLOUDINARY_CLOUD_NAME}/auto/upload`,
-    {
-      method: 'POST',
-      body: formData,
-    }
-  );
-  
-  if (!res.ok) throw new Error('Erreur lors du téléchargement de l\'image');
-  const data = await res.json();
-  return data.secure_url;
+  return new Promise((resolve, reject) => {
+    const xhr = new XMLHttpRequest();
+
+    // Track upload progress
+    xhr.upload.addEventListener('progress', (e) => {
+      if (e.lengthComputable) {
+        const percentComplete = Math.round((e.loaded / e.total) * 100);
+        if (onProgress) onProgress(percentComplete);
+      }
+    });
+
+    xhr.addEventListener('load', () => {
+      if (xhr.status === 200) {
+        const data = JSON.parse(xhr.responseText);
+        resolve(data.secure_url);
+      } else {
+        reject(new Error('Erreur lors du téléchargement de la vidéo'));
+      }
+    });
+
+    xhr.addEventListener('error', () => {
+      reject(new Error('Erreur réseau lors du téléchargement'));
+    });
+
+    xhr.open('POST', `https://api.cloudinary.com/v1_1/${import.meta.env.VITE_CLOUDINARY_CLOUD_NAME}/auto/upload`);
+    xhr.send(formData);
+  });
 }
 
 export function formatTextWithLinks(text) {
