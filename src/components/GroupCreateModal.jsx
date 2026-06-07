@@ -152,7 +152,11 @@ export default function GroupCreateModal({ isOpen, onClose }) {
               <span>{coverFile ? 'Changer la photo' : 'Choisir une photo'}</span>
               <input type="file" accept="image/*" onChange={handleCoverChange} />
             </label>
-            {coverPreview && <img src={coverPreview} alt="Aperçu couverture" className="group-cover-preview" />}
+            {coverPreview && (
+              <div className="group-cover-preview-wrap">
+                <img src={coverPreview} alt="Aperçu couverture" className="group-cover-preview" />
+              </div>
+            )}
           </div>
 
           <div className="group-options-grid">

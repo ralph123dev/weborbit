@@ -381,3 +381,55 @@
   }
 }
 
+/* Light theme readability */
+[data-theme='light'] .create-post-modal {
+  background: var(--surface);
+  border-color: var(--border-color);
+  box-shadow: var(--shadow-lg);
+}
+
+[data-theme='light'] .create-post-header {
+  background: var(--surface-hover);
+  border-bottom-color: var(--border-color);
+}
+
+[data-theme='light'] .create-post-title h3 {
+  background: none;
+  -webkit-text-fill-color: var(--text-primary);
+  color: var(--text-primary);
+}
+
+[data-theme='light'] .create-post-textarea {
+  color: var(--text-primary);
+}
+
+[data-theme='light'] .create-post-textarea::placeholder {
+  color: var(--text-secondary);
+}
+
+[data-theme='light'] .create-post-footer {
+  background: var(--surface-hover);
+  border-top-color: var(--border-color);
+}
+
+[data-theme='light'] .create-post-tool-btn {
+  background: var(--surface);
+  border-color: var(--border-color);
+  color: var(--primary-color);
+}
+
+[data-theme='light'] .create-post-close-btn {
+  background: var(--surface-hover);
+  border-color: var(--border-color);
+  color: var(--text-secondary);
+}
+
+[data-theme='light'] .create-post-audio-preview {
+  background: var(--surface-hover);
+  border-color: var(--border-color);
+}
+
+[data-theme='light'] .create-post-publish-btn:disabled {
+  background: var(--border-color);
+  color: var(--text-secondary);
+}

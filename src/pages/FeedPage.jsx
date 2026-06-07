@@ -5,6 +5,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 import { supabase } from '../services/supabase';
 import { formatCount, formatTextWithLinks, formatTimeAgo, uploadToCloudinary } from '../utils/helpers';
+import { buildCommentMap, getCommentDepth, getQuotedAuthor, getEffectiveParentId, canReplyTo } from '../utils/commentHelpers';
 import CustomAudioPlayer from '../components/CustomAudioPlayer';
 import './FeedPage.css';
 
@@ -346,11 +347,12 @@ export default function FeedPage() {
         audioUrl = await uploadToCloudinary(commentAudioBlob);
       }
 
+      const commentMap = buildCommentMap(comments);
       const commentData = {
         post_id: activeCommentPost.id,
         user_id: user.id,
         content: newComment.trim(),
-        parent_id: replyingTo?.id || null
+        parent_id: getEffectiveParentId(replyingTo, commentMap)
       };
 
       if (audioUrl) {
@@ -867,46 +869,62 @@ export default function FeedPage() {
               Soyez le premier à commenter !
             </div>
           ) : (
-            comments.map(comment => (
-              <div key={comment.id} className="comment-item">
-                <img src={comment.profiles?.avatar_url || 'https://static.vecteezy.com/system/resources/thumbnails/004/607/791/small_2x/man-face-emotive-icon-smiling-male-character-in-blue-shirt-flat-illustration-isolated-on-white-happy-human-psychological-portrait-positive-emotions-user-avatar-for-app-web-design-vector.jpg'} alt="Avatar" className="avatar" />
-                <div className="comment-content">
-                  <div className="comment-meta">
-                    <span className="font-bold text-sm username-link" onClick={() => handleOpenProfile(comment.profiles)}>
-                      {comment.profiles?.first_name} {comment.profiles?.last_name}
-                    </span>
-                    <span className="text-xs text-secondary ml-2">{formatTimeAgo(comment.created_at)}</span>
-                  </div>
-                  {comment.parent_id && (
-                    <div className="reply-indicator text-xs text-primary mb-1">En réponse</div>
-                  )}
-                  <div className="comment-text text-sm">
-                    {comment.content}
-                  </div>
-                  {comment.audio_url && (
-                    <div className="mt-2 mb-1">
-                      <CustomAudioPlayer src={comment.audio_url} />
+            (() => {
+              const commentMap = buildCommentMap(comments);
+              return comments.map((comment) => {
+                const depth = getCommentDepth(comment, commentMap);
+                const quotedAuthor = getQuotedAuthor(comment, commentMap);
+
+                return (
+                  <div
+                    key={comment.id}
+                    className="comment-item"
+                    style={{ paddingLeft: `${depth * 16}px` }}
+                  >
+                    <img src={comment.profiles?.avatar_url || 'https://static.vecteezy.com/system/resources/thumbnails/004/607/791/small_2x/man-face-emotive-icon-smiling-male-character-in-blue-shirt-flat-illustration-isolated-on-white-happy-human-psychological-portrait-positive-emotions-user-avatar-for-app-web-design-vector.jpg'} alt="Avatar" className="avatar" />
+                    <div className="comment-content">
+                      {quotedAuthor && (
+                        <div className="comment-reply-to">
+                          En réponse à <span className="comment-reply-name">{quotedAuthor}</span>
+                        </div>
+                      )}
+                      <div className="comment-meta">
+                        <span className="font-bold text-sm username-link" onClick={() => handleOpenProfile(comment.profiles)}>
+                          {comment.profiles?.first_name} {comment.profiles?.last_name}
+                        </span>
+                        <span className="text-xs text-secondary ml-2">{formatTimeAgo(comment.created_at)}</span>
+                      </div>
+                      <div className="comment-text text-sm">
+                        {comment.content}
+                      </div>
+                      {comment.audio_url && (
+                        <div className="mt-2 mb-1">
+                          <CustomAudioPlayer src={comment.audio_url} />
+                        </div>
+                      )}
+                      <div className="flex items-center gap-4 mt-1">
+                        {canReplyTo(comment, commentMap) && (
+                          <button 
+                            className="reply-btn text-xs text-secondary font-bold"
+                            onClick={() => setReplyingTo(comment)}
+                          >
+                            Répondre
+                          </button>
+                        )}
+                        {comment.user_id === user?.id && (
+                          <button 
+                            className="text-xs text-red-400 hover:text-red-500 transition-colors flex items-center gap-1"
+                            onClick={() => handleDeleteComment(comment.id, comment.created_at)}
+                          >
+                            <X size={12} /> Supprimer
+                          </button>
+                        )}
+                      </div>
                     </div>
-                  )}
-                  <div className="flex items-center gap-4 mt-1">
-                    <button 
-                      className="reply-btn text-xs text-secondary font-bold"
-                      onClick={() => setReplyingTo(comment)}
-                    >
-                      Répondre
-                    </button>
-                    {comment.user_id === user?.id && (
-                      <button 
-                        className="text-xs text-red-400 hover:text-red-500 transition-colors flex items-center gap-1"
-                        onClick={() => handleDeleteComment(comment.id, comment.created_at)}
-                      >
-                        <X size={12} /> Supprimer
-                      </button>
-                    )}
                   </div>
-                </div>
-              </div>
-            ))
+                );
+              });
+            })()
           )}
           <div ref={commentsEndRef} />
         </div>

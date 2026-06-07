@@ -1,6 +1,6 @@
 .layout {
   display: flex;
-  min-height: 100vh;
+  min-height: 100dvh;
   width: 100%;
   max-width: 1440px;
   margin: 0 auto;
@@ -11,7 +11,7 @@
   min-width: 0;
   border-left: 1px solid var(--border-color);
   border-right: 1px solid var(--border-color);
-  min-height: 100vh;
+  min-height: 100dvh;
 }
 
 .mobile-header {

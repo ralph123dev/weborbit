@@ -131,12 +131,21 @@
   display: none;
 }
 
+.group-cover-preview-wrap {
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  border-radius: 20px;
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(0, 0, 0, 0.2);
+}
+
 .group-cover-preview {
   width: 100%;
-  max-height: 220px;
+  height: 100%;
   object-fit: cover;
-  border-radius: 20px;
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  object-position: center;
+  display: block;
 }
 
 .group-options-grid {
@@ -211,11 +220,52 @@
 @media (max-width: 720px) {
   .group-create-modal {
     width: 100%;
-    max-height: 100vh;
+    max-height: 100dvh;
     border-radius: 20px;
   }
 
   .group-options-grid {
     grid-template-columns: 1fr;
   }
+}
+
+/* Light theme readability */
+[data-theme='light'] .group-create-modal {
+  background: var(--surface);
+  border-color: var(--border-color);
+  box-shadow: var(--shadow-lg);
+}
+
+[data-theme='light'] .group-create-header h2,
+[data-theme='light'] .group-field-label,
+[data-theme='light'] .group-radio-card label {
+  color: var(--text-primary);
+}
+
+[data-theme='light'] .group-create-subtitle,
+[data-theme='light'] .group-radio-card label span {
+  color: var(--text-secondary);
+}
+
+[data-theme='light'] .group-field-input,
+[data-theme='light'] .group-field-textarea {
+  background: var(--surface-hover);
+  border-color: var(--border-color);
+  color: var(--text-primary);
+}
+
+[data-theme='light'] .group-field-input:focus,
+[data-theme='light'] .group-field-textarea:focus {
+  border-color: var(--primary-color);
+  box-shadow: 0 0 0 3px rgba(106, 90, 255, 0.12);
+}
+
+[data-theme='light'] .group-close-btn,
+[data-theme='light'] .cover-upload-btn {
+  color: var(--text-primary);
+}
+
+[data-theme='light'] .group-radio-card {
+  background: var(--surface-hover);
+  border-color: var(--border-color);
 }

@@ -1,4 +1,4 @@
-import { AlertTriangle, Code, Heart, Link, MessageSquare, Share2, Volume2, VolumeX, X } from 'lucide-react';
+import { AlertTriangle, Code, Heart, Link, MessageSquare, Share2, Smile, Volume2, VolumeX, X } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { toast } from 'react-hot-toast';
 import { useLocation, useNavigate } from 'react-router-dom';
@@ -14,7 +14,7 @@ export default function ShortsPage() {
   const [shorts, setShorts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [activeShortIndex, setActiveShortIndex] = useState(0);
-  const [isMuted, setIsMuted] = useState(false);
+  const [isMuted, setIsMuted] = useState(true);
   
   // Pagination State
   const [page, setPage] = useState(0);
@@ -88,13 +88,14 @@ export default function ShortsPage() {
     videoRefs.current.forEach((video, index) => {
       if (video) {
         if (index === activeShortIndex) {
+          video.muted = isMuted;
           video.play().catch(() => {});
         } else {
           video.pause();
         }
       }
     });
-  }, [activeShortIndex, shorts, playbackLocked, showEmbedModal, activeCommentShort]);
+  }, [activeShortIndex, shorts, playbackLocked, showEmbedModal, activeCommentShort, isMuted]);
 
   // Set up IntersectionObserver to autoplay videos as they scroll into view
   useEffect(() => {
@@ -449,14 +450,14 @@ export default function ShortsPage() {
 
   if (loading) {
     return (
-      <div className="flex justify-center items-center h-full text-white bg-black">
+      <div className="shorts-page-loading">
         <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
       </div>
     );
   }
 
   return (
-    <div className="relative h-[calc(100vh-70px)] md:h-full bg-zinc-950 overflow-y-auto flex flex-col items-center py-8" onScroll={handleScroll}>
+    <div className="shorts-page" onScroll={handleScroll}>
       {/* Styles */}
       <style>{`
         .shorts-feed-container {
@@ -704,7 +705,7 @@ export default function ShortsPage() {
                 src={item.media_url || item.image_url || item.image_urls?.[0]}
                 className="video-element"
                 loop
-                muted={isMuted}
+                muted
                 playsInline
                 preload={Math.abs(index - activeShortIndex) <= 2 ? "auto" : "none"}
                 onClick={() => {
@@ -719,10 +720,18 @@ export default function ShortsPage() {
                 onPlay={() => setActiveShortIndex(index)}
               />
 
-              <button className="sound-btn-overlay" onClick={(e) => {
-                e.stopPropagation();
-                setIsMuted(!isMuted);
-              }}>
+              <button
+                type="button"
+                className="sound-btn-overlay"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  const nextMuted = !isMuted;
+                  setIsMuted(nextMuted);
+                  if (videoRefs.current[index]) {
+                    videoRefs.current[index].muted = nextMuted;
+                  }
+                }}
+              >
                 {isMuted ? <VolumeX size={18} /> : <Volume2 size={18} />}
               </button>
             </div>
@@ -767,10 +776,26 @@ export default function ShortsPage() {
                   <span>{item.likes_count || 0}</span>
                 </button>
 
-                {/* Comment / Sticker Button */}
-                <button onClick={() => setActiveReactionShortId(activeReactionShortId === item.id ? null : item.id)} className="action-btn-inst">
+                {/* Comment Button */}
+                <button
+                  type="button"
+                  onClick={() => handleOpenComments(item)}
+                  className="action-btn-inst"
+                  aria-label="Ouvrir les commentaires"
+                >
                   <MessageSquare size={22} />
                   <span>{item.comments_count || 0}</span>
+                </button>
+
+                {/* Reactions / Stickers Button */}
+                <button
+                  type="button"
+                  onClick={() => setActiveReactionShortId(activeReactionShortId === item.id ? null : item.id)}
+                  className="action-btn-inst"
+                  aria-label="Réactions rapides"
+                >
+                  <Smile size={22} />
+                  <span>Réagir</span>
                 </button>
 
                 {/* Quick Stickers Popover */}
@@ -842,17 +867,16 @@ export default function ShortsPage() {
 
       {/* Comments Drawer/Modal */}
       {activeCommentShort && (
-        <div className="fixed inset-0 bg-black/80 backdrop-blur-md flex items-center justify-center z-[110] p-4">
-          <div className="bg-zinc-900 border border-zinc-800 rounded-2xl w-full max-w-md h-[500px] flex flex-col relative text-white">
-            <div className="p-4 border-b border-zinc-800 flex justify-between items-center">
-              <h3 className="font-bold text-lg">Commentaires</h3>
-              <button onClick={() => setActiveCommentShort(null)} className="text-zinc-400 hover:text-white">
+        <div className="shorts-comments-overlay">
+          <div className="shorts-comments-modal">
+            <div className="shorts-comments-header">
+              <h3>Commentaires</h3>
+              <button type="button" className="shorts-comments-close" onClick={() => setActiveCommentShort(null)}>
                 <X size={20} />
               </button>
             </div>
 
-            {/* Comments List */}
-            <div className="flex-1 overflow-y-auto p-4 flex flex-col gap-4">
+            <div className="shorts-comments-list">
               {commentsLoading ? (
                 <div className="flex justify-center items-center h-full">
                   <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-purple-500"></div>
@@ -876,20 +900,20 @@ export default function ShortsPage() {
               )}
             </div>
 
-            {/* Comment Form */}
-            <div className="p-4 border-t border-zinc-800 flex gap-2">
+            <div className="shorts-comments-form">
               <input
                 type="text"
                 value={newComment}
                 onChange={e => setNewComment(e.target.value)}
                 placeholder="Ajouter un commentaire..."
-                className="flex-1 bg-zinc-800 border border-zinc-700 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-purple-500 text-white"
+                className="shorts-comments-input"
                 onKeyDown={e => e.key === 'Enter' && handlePostComment()}
               />
-              <button 
+              <button
+                type="button"
                 onClick={handlePostComment}
                 disabled={isSubmittingComment || !newComment.trim()}
-                className="bg-purple-600 hover:bg-purple-700 disabled:opacity-50 text-white text-sm font-bold px-4 rounded-xl transition-colors"
+                className="shorts-comments-send"
               >
                 Envoyer
               </button>

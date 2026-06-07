@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { supabase } from '../services/supabase';
 import { Turnstile } from '@marsidev/react-turnstile';
 import logo from '../assets/logo.png';
-import { ArrowRight, ArrowLeft, CheckCircle, Mail, Lock, User } from 'lucide-react';
+import { ArrowRight, ArrowLeft, CheckCircle, Mail, Lock, User, Eye, EyeOff } from 'lucide-react';
 import './AuthModal.css';
 
 export default function AuthModal() {
@@ -11,6 +11,7 @@ export default function AuthModal() {
   // Form State
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
   const [turnstileToken, setTurnstileToken] = useState(null);
@@ -122,7 +123,7 @@ export default function AuthModal() {
 
         <div className="auth-landing-right">
           <div className="landing-card glass">
-            <h2 className="font-black text-xl mb-6">Se connecter à Orbit Post</h2>
+            <h2 className="landing-card-title font-black text-xl">Se connecter à Orbit Post</h2>
             
             <button className="landing-btn landing-btn-login" onClick={() => goTo('login')}>
               <Mail size={20} />
@@ -174,15 +175,23 @@ export default function AuthModal() {
             </div>
             <div className="input-group">
               <label>Mot de passe</label>
-              <div className="input-with-icon">
+              <div className="input-with-icon input-with-toggle">
                 <Lock size={18} className="input-icon" />
                 <input 
-                  type="password" 
+                  type={showPassword ? 'text' : 'password'} 
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder="••••••••"
                   required
                 />
+                <button
+                  type="button"
+                  className="password-toggle-btn"
+                  onClick={() => setShowPassword((v) => !v)}
+                  aria-label={showPassword ? 'Masquer le mot de passe' : 'Afficher le mot de passe'}
+                >
+                  {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                </button>
               </div>
             </div>
             <button type="submit" className="btn btn-primary auth-submit w-full" disabled={loading}>
@@ -280,14 +289,25 @@ export default function AuthModal() {
                 <p className="step-subtitle text-secondary">6 caractères minimum pour protéger votre compte</p>
                 <div className="input-group">
                   <label>Mot de passe <span className="text-primary">*</span></label>
-                  <div className="input-with-icon">
+                  <div className="input-with-icon input-with-toggle">
                     <Lock size={18} className="input-icon" />
                     <input 
-                      type="password" value={password}
+                      type={showPassword ? 'text' : 'password'}
+                      value={password}
                       onChange={(e) => setPassword(e.target.value)}
                       placeholder="••••••••"
-                      autoFocus required minLength={6}
+                      autoFocus
+                      required
+                      minLength={6}
                     />
+                    <button
+                      type="button"
+                      className="password-toggle-btn"
+                      onClick={() => setShowPassword((v) => !v)}
+                      aria-label={showPassword ? 'Masquer le mot de passe' : 'Afficher le mot de passe'}
+                    >
+                      {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                    </button>
                   </div>
                 </div>
                 <div className="password-strength">
