@@ -1,7 +1,8 @@
-import { AlertTriangle, Code, Copy, Heart, Link, MessageSquare, Share2, Sparkles, Upload, Volume2, VolumeX, X } from 'lucide-react';
+import { AlertTriangle, Code, Heart, Link, MessageSquare, Share2, Volume2, VolumeX, X } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { toast } from 'react-hot-toast';
 import { useLocation, useNavigate } from 'react-router-dom';
+import EmbedShortModal, { getShortShareUrl } from '../components/EmbedShortModal';
 import { useAuth } from '../hooks/useAuth';
 import { supabase } from '../services/supabase';
 import './ShortsPage.css';
@@ -20,17 +21,8 @@ export default function ShortsPage() {
   const [hasMore, setHasMore] = useState(true);
   const [fetchingMore, setFetchingMore] = useState(false);
 
-  // Upload State
-  const [showUploadModal, setShowUploadModal] = useState(false);
-  const [uploadFile, setUploadFile] = useState(null);
-  const [uploadTitle, setUploadTitle] = useState('');
-  const [uploadDescription, setUploadDescription] = useState('');
-  const [isUploading, setIsUploading] = useState(false);
-  const [uploadProgress, setUploadProgress] = useState(0);
-  const [showPublishProgress, setShowPublishProgress] = useState(false);
-  const [publishComplete, setPublishComplete] = useState(false);
-  const [publishedShortLocal, setPublishedShortLocal] = useState(null);
-  
+  const [playbackLocked, setPlaybackLocked] = useState(false);
+
   // Comments Drawer State
   const [activeCommentShort, setActiveCommentShort] = useState(null);
   const [comments, setComments] = useState([]);
@@ -54,30 +46,45 @@ export default function ShortsPage() {
   useEffect(() => {
     const params = new URLSearchParams(location.search);
     if (params.get('openPublish') === 'true') {
-      setShowUploadModal(true);
-      // Clean up the URL
+      window.dispatchEvent(new Event('open-publish-short-modal'));
       routerNavigate('/shorts', { replace: true });
     }
   }, [location.search, routerNavigate]);
-
-  // Listen for sidebar event to open modal (when already on /shorts)
-  useEffect(() => {
-    const handleOpenModal = () => {
-      setShowUploadModal(true);
-    };
-    
-    window.addEventListener('open-publish-short-modal', handleOpenModal);
-    return () => {
-      window.removeEventListener('open-publish-short-modal', handleOpenModal);
-    };
-  }, []);
 
   useEffect(() => {
     fetchShorts(0, true);
   }, [user]);
 
   useEffect(() => {
-    // Play active video, pause others
+    const lockPlayback = () => setPlaybackLocked(true);
+    const unlockPlayback = () => setPlaybackLocked(false);
+    const refreshShorts = () => fetchShorts(0, true);
+
+    window.addEventListener('pause-shorts-playback', lockPlayback);
+    window.addEventListener('resume-shorts-playback', unlockPlayback);
+    window.addEventListener('short-published', refreshShorts);
+    window.addEventListener('shorts-updated', refreshShorts);
+
+    return () => {
+      window.removeEventListener('pause-shorts-playback', lockPlayback);
+      window.removeEventListener('resume-shorts-playback', unlockPlayback);
+      window.removeEventListener('short-published', refreshShorts);
+      window.removeEventListener('shorts-updated', refreshShorts);
+    };
+  }, [user]);
+
+  const pauseAllShorts = () => {
+    videoRefs.current.forEach((video) => {
+      if (video && !video.paused) video.pause();
+    });
+  };
+
+  useEffect(() => {
+    if (playbackLocked || showEmbedModal || activeCommentShort) {
+      pauseAllShorts();
+      return;
+    }
+
     videoRefs.current.forEach((video, index) => {
       if (video) {
         if (index === activeShortIndex) {
@@ -87,7 +94,7 @@ export default function ShortsPage() {
         }
       }
     });
-  }, [activeShortIndex, shorts]);
+  }, [activeShortIndex, shorts, playbackLocked, showEmbedModal, activeCommentShort]);
 
   // Set up IntersectionObserver to autoplay videos as they scroll into view
   useEffect(() => {
@@ -285,7 +292,7 @@ export default function ShortsPage() {
   };
 
   const handleCopyLink = (item) => {
-    const link = `${window.location.origin}/shorts?id=${item.id}`;
+    const link = getShortShareUrl(item.id);
     navigator.clipboard.writeText(link);
     toast.success('Lien du Short copié ! 🔗');
     setActiveShareShort(null);
@@ -343,110 +350,6 @@ export default function ShortsPage() {
     } catch (e) {
       console.error('Error toggling follow:', e);
       toast.error('Une erreur est survenue');
-    }
-  };
-
-  const uploadToCloudinaryWithProgress = (file, onProgress) => {
-    return new Promise((resolve, reject) => {
-      const xhr = new XMLHttpRequest();
-      const formData = new FormData();
-      formData.append('file', file);
-      formData.append('upload_preset', import.meta.env.VITE_CLOUDINARY_UPLOAD_PRESET);
-
-      xhr.open('POST', `https://api.cloudinary.com/v1_1/${import.meta.env.VITE_CLOUDINARY_CLOUD_NAME}/auto/upload`);
-
-      xhr.upload.onprogress = (event) => {
-        if (event.lengthComputable) {
-          const percent = Math.min(100, Math.round((event.loaded / event.total) * 100));
-          onProgress(percent);
-        }
-      };
-
-      xhr.onload = () => {
-        if (xhr.status >= 200 && xhr.status < 300) {
-          try {
-            const data = JSON.parse(xhr.responseText);
-            resolve(data.secure_url);
-          } catch (parseError) {
-            reject(new Error('Erreur de réponse Cloudinary')); 
-          }
-        } else {
-          reject(new Error('Erreur lors du téléchargement du short'));
-        }
-      };
-
-      xhr.onerror = () => reject(new Error('Erreur réseau pendant le téléchargement'));
-      xhr.send(formData);
-    });
-  };
-
-  const pauseAllShorts = () => {
-    videoRefs.current.forEach(video => {
-      if (video && !video.paused) {
-        video.pause();
-      }
-    });
-  };
-
-  useEffect(() => {
-    if (showUploadModal || showPublishProgress || isUploading) {
-      pauseAllShorts();
-    }
-  }, [showUploadModal, showPublishProgress, isUploading]);
-
-  const handleUploadShort = async () => {
-    if (!uploadFile) return toast.error('Sélectionnez une vidéo');
-    if (!user) return toast.error('Connectez-vous pour publier');
-    if (!uploadTitle.trim() || !uploadDescription.trim()) return toast.error('Veuillez renseigner le titre et la description du short');
-
-    setShowUploadModal(false);
-    setUploadProgress(5);
-    setPublishComplete(false);
-    setShowPublishProgress(true);
-    setIsUploading(true);
-
-    try {
-      const url = await uploadToCloudinaryWithProgress(uploadFile, (percent) => {
-        setUploadProgress(percent);
-      });
-
-      const { data: inserted, error } = await supabase.from('shorts').insert({
-        user_id: user.id,
-        media_url: url,
-        media_type: 'video',
-        title: uploadTitle.trim(),
-        description: uploadDescription.trim(),
-        status: 'published'
-      }).select().single();
-
-      if (error) throw error;
-
-      // Keep local reference and notify other parts of the app that a short was published
-      setPublishedShortLocal(inserted);
-      try { window.dispatchEvent(new CustomEvent('short-published', { detail: inserted })); } catch (e) { /* ignore */ }
-
-      setUploadProgress(100);
-      setPublishComplete(true);
-      await new Promise(resolve => setTimeout(resolve, 900));
-
-      toast.success('Short publié avec succès ! 🚀');
-      setUploadFile(null);
-      setUploadTitle('');
-      setUploadDescription('');
-      fetchShorts(0, true);
-      setTimeout(() => {
-        setShowPublishProgress(false);
-        setPublishComplete(false);
-        setUploadProgress(0);
-      }, 900);
-    } catch (e) {
-      console.error(e);
-      toast.error('Erreur lors de la publication du Short');
-      setShowPublishProgress(false);
-      setUploadProgress(0);
-      setPublishComplete(false);
-    } finally {
-      setIsUploading(false);
     }
   };
 
@@ -551,11 +454,6 @@ export default function ShortsPage() {
       </div>
     );
   }
-
-  const getEmbedCode = (item) => {
-    const link = `${window.location.origin}/shorts?id=${item.id}`;
-    return `<iframe src="${link}" width="100%" height="600" style="border:none;border-radius:12px;background:#000;" allowfullscreen></iframe>`;
-  };
 
   return (
     <div className="relative h-[calc(100vh-70px)] md:h-full bg-zinc-950 overflow-y-auto flex flex-col items-center py-8" onScroll={handleScroll}>
@@ -932,312 +830,14 @@ export default function ShortsPage() {
         )}
       </div>
 
-      {/* Upload Short Modal - Premium Design */}
-      {showUploadModal && (
-        <div 
-          className="fixed inset-0 flex items-center justify-center z-[110] p-4"
-          style={{ background: 'rgba(0,0,0,0.85)', backdropFilter: 'blur(16px)' }}
-          onClick={(e) => { if (e.target === e.currentTarget) setShowUploadModal(false); }}
-        >
-          <div style={{
-            background: 'linear-gradient(145deg, #1a1a2e 0%, #16162a 50%, #0f0f1a 100%)',
-            border: '1px solid rgba(168, 85, 247, 0.2)',
-            borderRadius: '24px',
-            width: '100%',
-            maxWidth: '480px',
-            overflow: 'hidden',
-            boxShadow: '0 25px 60px rgba(0,0,0,0.6), 0 0 80px rgba(168,85,247,0.08)',
-            animation: 'modalSlideUp 0.35s cubic-bezier(0.16, 1, 0.3, 1)',
-            color: 'white'
-          }}>
-            {/* Header with gradient */}
-            <div style={{
-              background: 'linear-gradient(135deg, rgba(168,85,247,0.15), rgba(59,130,246,0.1))',
-              padding: '1.5rem 1.75rem',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              borderBottom: '1px solid rgba(168,85,247,0.1)'
-            }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                <div style={{
-                  width: '44px', height: '44px', borderRadius: '14px',
-                  background: 'linear-gradient(135deg, #a855f7, #7c3aed)',
-                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  boxShadow: '0 4px 15px rgba(168,85,247,0.4)'
-                }}>
-                  <Upload size={22} color="white" />
-                </div>
-                <div>
-                  <h3 style={{ margin: 0, fontSize: '1.15rem', fontWeight: 800, letterSpacing: '-0.3px' }}>Publier un Short</h3>
-                  <p style={{ margin: 0, fontSize: '0.8rem', color: '#a1a1aa' }}>Partagez un moment avec la communauté</p>
-                </div>
-              </div>
-              <button 
-                onClick={() => setShowUploadModal(false)} 
-                style={{
-                  background: 'rgba(255,255,255,0.06)', border: 'none', borderRadius: '12px',
-                  width: '36px', height: '36px', display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  cursor: 'pointer', color: '#a1a1aa', transition: 'all 0.2s'
-                }}
-                onMouseOver={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.12)'; e.currentTarget.style.color = 'white'; }}
-                onMouseOut={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.06)'; e.currentTarget.style.color = '#a1a1aa'; }}
-              >
-                <X size={18} />
-              </button>
-            </div>
-
-            {/* Body */}
-            <div style={{ padding: '1.5rem 1.75rem', display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
-              
-              {/* Video Upload Zone */}
-              <div>
-                <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 700, color: '#d4d4d8', marginBottom: '8px' }}>
-                  📹 Vidéo du Short
-                </label>
-                <label
-                  style={{
-                    display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
-                    border: uploadFile ? '2px solid #a855f7' : '2px dashed rgba(168,85,247,0.3)',
-                    borderRadius: '16px', padding: uploadFile ? '12px' : '2rem', cursor: 'pointer',
-                    background: uploadFile ? 'rgba(168,85,247,0.08)' : 'rgba(255,255,255,0.02)',
-                    transition: 'all 0.3s', minHeight: uploadFile ? 'auto' : '120px'
-                  }}
-                  onMouseOver={e => { if (!uploadFile) e.currentTarget.style.background = 'rgba(168,85,247,0.05)'; }}
-                  onMouseOut={e => { if (!uploadFile) e.currentTarget.style.background = 'rgba(255,255,255,0.02)'; }}
-                >
-                  <input 
-                    type="file" 
-                    accept="video/mp4,video/webm,video/quicktime" 
-                    onChange={e => setUploadFile(e.target.files?.[0])}
-                    style={{ display: 'none' }}
-                  />
-                  {uploadFile ? (
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px', width: '100%' }}>
-                      <div style={{
-                        width: '48px', height: '48px', borderRadius: '12px',
-                        background: 'linear-gradient(135deg, #a855f7, #7c3aed)',
-                        display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0
-                      }}>
-                        <Sparkles size={22} color="white" />
-                      </div>
-                      <div style={{ flex: 1, overflow: 'hidden' }}>
-                        <div style={{ fontSize: '0.9rem', fontWeight: 700, color: '#e4e4e7', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                          {uploadFile.name}
-                        </div>
-                        <div style={{ fontSize: '0.75rem', color: '#a855f7', marginTop: '2px' }}>
-                          {(uploadFile.size / (1024 * 1024)).toFixed(1)} Mo · Prêt à publier ✓
-                        </div>
-                      </div>
-                    </div>
-                  ) : (
-                    <>
-                      <div style={{
-                        width: '56px', height: '56px', borderRadius: '50%',
-                        background: 'rgba(168,85,247,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center',
-                        marginBottom: '12px'
-                      }}>
-                        <Upload size={24} color="#a855f7" />
-                      </div>
-                      <span style={{ fontSize: '0.9rem', fontWeight: 600, color: '#d4d4d8' }}>Cliquez pour sélectionner une vidéo</span>
-                      <span style={{ fontSize: '0.75rem', color: '#71717a', marginTop: '4px' }}>MP4, WebM · Max 100 Mo</span>
-                    </>
-                  )}
-                </label>
-              </div>
-
-              {/* Title */}
-              <div>
-                <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 700, color: '#d4d4d8', marginBottom: '8px' }}>
-                  ✨ Titre
-                </label>
-                <input
-                  type="text"
-                  value={uploadTitle}
-                  onChange={e => setUploadTitle(e.target.value)}
-                  placeholder="Donnez un titre accrocheur..."
-                  style={{
-                    width: '100%', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)',
-                    borderRadius: '12px', padding: '12px 16px', fontSize: '0.9rem', color: 'white',
-                    outline: 'none', transition: 'border-color 0.2s', boxSizing: 'border-box'
-                  }}
-                  onFocus={e => e.target.style.borderColor = 'rgba(168,85,247,0.5)'}
-                  onBlur={e => e.target.style.borderColor = 'rgba(255,255,255,0.08)'}
-                />
-              </div>
-
-              {/* Description */}
-              <div>
-                <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 700, color: '#d4d4d8', marginBottom: '8px' }}>
-                  📝 Description
-                </label>
-                <textarea
-                  value={uploadDescription}
-                  onChange={e => setUploadDescription(e.target.value)}
-                  placeholder="Décrivez votre short, ajoutez des #hashtags..."
-                  style={{
-                    width: '100%', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)',
-                    borderRadius: '12px', padding: '12px 16px', fontSize: '0.9rem', color: 'white',
-                    outline: 'none', transition: 'border-color 0.2s', height: '80px', resize: 'none',
-                    fontFamily: 'inherit', boxSizing: 'border-box'
-                  }}
-                  onFocus={e => e.target.style.borderColor = 'rgba(168,85,247,0.5)'}
-                  onBlur={e => e.target.style.borderColor = 'rgba(255,255,255,0.08)'}
-                />
-              </div>
-
-              {/* Publish Button */}
-              <button
-                onClick={handleUploadShort}
-                disabled={isUploading || !uploadFile}
-                style={{
-                  width: '100%',
-                  background: isUploading 
-                    ? 'linear-gradient(135deg, #6b21a8, #581c87)' 
-                    : 'linear-gradient(135deg, #a855f7, #7c3aed, #6d28d9)',
-                  border: 'none', borderRadius: '14px', padding: '14px', color: 'white',
-                  fontSize: '0.95rem', fontWeight: 800, cursor: isUploading || !uploadFile ? 'not-allowed' : 'pointer',
-                  opacity: !uploadFile ? 0.4 : 1, transition: 'all 0.3s',
-                  display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px',
-                  boxShadow: uploadFile ? '0 8px 25px rgba(168,85,247,0.35)' : 'none',
-                  marginTop: '4px'
-                }}
-                onMouseOver={e => { if (!isUploading && uploadFile) e.currentTarget.style.transform = 'translateY(-1px)'; }}
-                onMouseOut={e => { e.currentTarget.style.transform = 'translateY(0)'; }}
-              >
-                {isUploading ? (
-                  <>
-                    <div style={{
-                      width: '20px', height: '20px', borderRadius: '50%',
-                      border: '2px solid rgba(255,255,255,0.2)', borderTopColor: 'white',
-                      animation: 'spin 0.8s linear infinite'
-                    }} />
-                    Publication en cours...
-                  </>
-                ) : (
-                  <>
-                    <Sparkles size={20} />
-                    Publier le Short
-                  </>
-                )}
-              </button>
-            </div>
-          </div>
-
-          <style>{`
-            @keyframes modalSlideUp {
-              from { opacity: 0; transform: translateY(30px) scale(0.96); }
-              to { opacity: 1; transform: translateY(0) scale(1); }
-            }
-            @keyframes spin {
-              to { transform: rotate(360deg); }
-            }
-          `}</style>
-        </div>
-      )}
-
-      {/* Small floating progress circle (top-left) */}
-      {showPublishProgress && (
-        <div className="progress-widget" aria-live="polite" aria-label="Publication du short">
-          <div className="circle-wrap">
-            <svg viewBox="0 0 40 40" width="40" height="40">
-              <circle className="track" cx="20" cy="20" r="18" />
-              <circle
-                className={`bar${publishComplete ? ' complete' : ''}`}
-                cx="20"
-                cy="20"
-                r="18"
-                strokeDasharray="113"
-                strokeDashoffset={113 - (uploadProgress / 100) * 113}
-              />
-            </svg>
-            <div className="pct-label">{publishComplete ? '' : `${uploadProgress}%`}</div>
-          </div>
-          <span className={`widget-text${publishComplete ? ' hidden' : ''}`}>
-            {uploadProgress === 0 ? 'Publication...' : uploadProgress < 30 ? 'Préparation...' : uploadProgress < 60 ? 'Encodage...' : uploadProgress < 90 ? 'Envoi en cours...' : 'Finalisation...'}
-          </span>
-          <span className={`status-badge${publishComplete ? ' visible' : ''}`}>✓ Short publié !</span>
-        </div>
-      )}
-
-      {/* Post-publish action panel (appears when finished) */}
-      {publishComplete && publishedShortLocal && (
-        <div className={`short-publish-actions ${showPublishProgress ? 'with-progress' : ''}`} role="dialog">
-          <div className="actions-content">
-            <div className="actions-title">{publishedShortLocal.title || 'Short publié'}</div>
-            <div className="actions-buttons">
-              <button className="btn btn-secondary" onClick={() => navigator.clipboard.writeText(`${window.location.origin}/shorts?id=${publishedShortLocal.id}`)}>Partager (lien)</button>
-              <button className="btn btn-secondary" onClick={() => navigator.clipboard.writeText(`<iframe src="${window.location.origin}/shorts?id=${publishedShortLocal.id}" style="width:100%;height:360px;border:0"></iframe>`)}>Copier embed</button>
-              <button className="btn btn-primary" onClick={() => {
-                // open edit inline
-                const evt = new CustomEvent('open-edit-published-short', { detail: publishedShortLocal });
-                window.dispatchEvent(evt);
-              }}>Modifier</button>
-              <button className="btn" onClick={() => { setPublishedShortLocal(null); setPublishComplete(false); setShowPublishProgress(false); setUploadProgress(0); }}>Annuler</button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Embed Modal */}
       {showEmbedModal && activeShareShort && (
-        <div className="fixed inset-0 z-[120] flex items-center justify-center bg-black/80 backdrop-blur-lg p-4">
-          <div className="w-full max-w-lg overflow-hidden rounded-[28px] border border-white/10 bg-gradient-to-br from-zinc-950 to-zinc-900 shadow-[0_30px_80px_rgba(0,0,0,0.5)]">
-            <div className="flex items-start justify-between gap-3 border-b border-white/10 bg-zinc-950 px-6 py-5">
-              <div className="flex items-center gap-3">
-                <div className="flex h-12 w-12 items-center justify-center rounded-3xl bg-purple-500/15 text-purple-300 ring-1 ring-purple-500/30">
-                  <Code size={22} />
-                </div>
-                <div>
-                  <p className="text-sm uppercase tracking-[0.18em] text-purple-300">Intégration</p>
-                  <h3 className="text-xl font-bold text-white">Embed du Short</h3>
-                </div>
-              </div>
-              <button
-                onClick={() => {
-                  setShowEmbedModal(false);
-                  setActiveShareShort(null);
-                }}
-                className="text-zinc-400 transition hover:text-white"
-                aria-label="Fermer"
-              >
-                <X size={20} />
-              </button>
-            </div>
-
-            <div className="space-y-4 px-6 py-5">
-              <div className="rounded-3xl border border-white/10 bg-zinc-950/90 p-4">
-                <p className="text-sm text-zinc-400">Collez ce code sur votre site pour afficher le Short directement dans une iframe responsive.</p>
-              </div>
-
-              <div className="rounded-3xl border border-white/10 bg-zinc-950/90 p-4">
-                <label className="mb-2 block text-sm font-semibold text-white">Code d'intégration HTML</label>
-                <pre className="max-h-44 overflow-auto rounded-2xl bg-zinc-900 p-4 text-xs leading-6 text-zinc-200"><code>{getEmbedCode(activeShareShort)}</code></pre>
-              </div>
-
-              <div className="grid gap-3 sm:grid-cols-2">
-                <button
-                  onClick={() => {
-                    navigator.clipboard.writeText(getEmbedCode(activeShareShort));
-                    toast.success('Code d\'intégration copié !');
-                  }}
-                  className="inline-flex items-center justify-center gap-2 rounded-2xl bg-purple-600 px-4 py-3 text-sm font-semibold text-white transition hover:bg-purple-500"
-                >
-                  <Copy size={16} /> Copier le code
-                </button>
-                <button
-                  onClick={() => {
-                    setShowEmbedModal(false);
-                    setActiveShareShort(null);
-                  }}
-                  className="inline-flex items-center justify-center rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-sm font-semibold text-white transition hover:bg-white/10"
-                >
-                  Fermer
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
+        <EmbedShortModal
+          short={activeShareShort}
+          onClose={() => {
+            setShowEmbedModal(false);
+            setActiveShareShort(null);
+          }}
+        />
       )}
 
       {/* Comments Drawer/Modal */}

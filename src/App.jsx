@@ -9,6 +9,7 @@ import MessengerPage from './pages/MessengerPage';
 import ProfilePage from './pages/ProfilePage';
 import SettingsPage from './pages/SettingsPage';
 import PostEmbedPage from './pages/PostEmbedPage';
+import ShortEmbedPage from './pages/ShortEmbedPage';
 import InvitationsPage from './pages/InvitationsPage';
 import GroupFeedPage from './pages/GroupFeedPage';
 
@@ -116,8 +117,9 @@ function App() {
       {showProfileSetup && <ProfileSetupModal onClose={handleSkipSetup} />}
 
       <Routes>
-        {/* Public Post Embed Page */}
+        {/* Public Embed Pages */}
         <Route path="/post/:postId" element={<PostEmbedPage />} />
+        <Route path="/short/:shortId" element={<ShortEmbedPage />} />
 
         {/* Private Routes requiring Authentication */}
         <Route path="/*" element={
