@@ -95,6 +95,16 @@ export default function Sidebar({ isOpen, onClose, onCreatePost }) {
     document.body.removeChild(link);
   };
 
+  const handleNavItemClick = (e, item) => {
+    if (item.path === '/shorts') {
+      e.preventDefault();
+      alert('Shorts en cours de maintenance');
+      return;
+    }
+
+    if (window.innerWidth <= 768) onClose();
+  };
+
   const navItems = [
     { path: '/', icon: Home, label: 'Accueil' },
     { path: '/shorts', icon: Video, label: 'Shorts' },
@@ -124,9 +134,7 @@ export default function Sidebar({ isOpen, onClose, onCreatePost }) {
               to={item.path} 
               end={item.path === '/'}
               className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}
-              onClick={() => {
-                if (window.innerWidth <= 768) onClose();
-              }}
+              onClick={(e) => handleNavItemClick(e, item)}
             >
               <div className="nav-item-wrapper">
                 <item.icon className="nav-icon" size={24} />
