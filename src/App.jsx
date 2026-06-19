@@ -12,6 +12,7 @@ import PostEmbedPage from './pages/PostEmbedPage';
 import ShortEmbedPage from './pages/ShortEmbedPage';
 import InvitationsPage from './pages/InvitationsPage';
 import GroupFeedPage from './pages/GroupFeedPage';
+import VerifyEmail from './pages/VerifyEmail';
 
 // Components
 import Layout from './components/Layout';
@@ -120,6 +121,7 @@ function App() {
         {/* Public Embed Pages */}
         <Route path="/post/:postId" element={<PostEmbedPage />} />
         <Route path="/short/:shortId" element={<ShortEmbedPage />} />
+        <Route path="/verify" element={<VerifyEmail />} />
 
         {/* Private Routes requiring Authentication */}
         <Route path="/*" element={

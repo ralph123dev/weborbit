@@ -66,14 +66,33 @@ export async function uploadToCloudinary(file, onProgress) {
   });
 }
 
+// Helper function to escape HTML special characters
+function escapeHtml(text) {
+  const map = {
+    '&': '&amp;',
+    '<': '&lt;',
+    '>': '&gt;',
+    '"': '&quot;',
+    "'": '&#039;'
+  };
+  return text.replace(/[&<>"']/g, (char) => map[char]);
+}
+
 export function formatTextWithLinks(text) {
   if (!text) return text;
   
-  // Linkify URLs and Hashtags
-  const urlRegex = /(https?:\/\/[^\s]+)/g;
-  const hashtagRegex = /(#[a-zA-Z0-9_]+)/g;
+  // First escape all HTML to prevent XSS
+  let escaped = escapeHtml(text);
   
-  let formatted = text.replace(urlRegex, '<a href="$1" target="_blank" rel="noopener noreferrer" class="text-primary hover:underline">$1</a>');
+  // Then linkify URLs (match escaped text properly)
+  const urlRegex = /(https?:\/\/[^\s<&]+)/g;
+  let formatted = escaped.replace(urlRegex, (url) => {
+    const escapedUrl = escapeHtml(url);
+    return `<a href="${escapedUrl}" target="_blank" rel="noopener noreferrer" class="text-primary hover:underline">${escapedUrl}</a>`;
+  });
+  
+  // Then linkify Hashtags
+  const hashtagRegex = /(#[a-zA-Z0-9_]+)/g;
   formatted = formatted.replace(hashtagRegex, '<span class="text-primary cursor-pointer hover:underline">$1</span>');
   
   return formatted;

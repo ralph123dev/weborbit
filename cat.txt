@@ -1,0 +1,46 @@
+// CAPTCHA CODE REMOVED - Saved for reference
+
+// Import statement (line 4)
+import { Turnstile } from '@marsidev/react-turnstile';
+
+// State variable (line 19)
+const [turnstileToken, setTurnstileToken] = useState(null);
+
+// Validation in handleSignupSubmit (lines 57-60)
+if (!turnstileToken) {
+  setError('Veuillez valider le captcha.');
+  return;
+}
+
+// Validation in isStepValid function (line 99)
+if (step === 4) return turnstileToken !== null;
+
+// Reset in goTo function (line 107)
+setTurnstileToken(null);
+
+// Entire Step 4 component (lines 326-344)
+{step === 4 && (
+  <div className="wizard-step">
+    <div className="step-emoji">🛡️</div>
+    <h3 className="step-title">Vérification de sécurité</h3>
+    <p className="step-subtitle text-secondary">Prouvez que vous êtes humain pour protéger notre communauté</p>
+    <div className="turnstile-wrapper">
+      <Turnstile
+        siteKey={import.meta.env.VITE_TURNSTILE_SITE_KEY || '0x4AAAAAADdYECWgRvvjBv1E'}
+        onSuccess={(token) => setTurnstileToken(token)}
+        options={{ theme: 'auto' }}
+      />
+    </div>
+    {turnstileToken && (
+      <div className="captcha-success">
+        <CheckCircle size={16} /> Vérifié avec succès
+      </div>
+    )}
+  </div>
+)}
+
+// CSS class removed from final button (line 359)
+- glow-pulse
+
+// Updated TOTAL_STEPS value
+- TOTAL_STEPS = 4 (changed from 4 to 3)

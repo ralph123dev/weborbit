@@ -1,11 +1,12 @@
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { supabase } from '../services/supabase';
-import { Turnstile } from '@marsidev/react-turnstile';
 import logo from '../assets/logo.png';
 import { ArrowRight, ArrowLeft, CheckCircle, Mail, Lock, User, Eye, EyeOff } from 'lucide-react';
 import './AuthModal.css';
 
 export default function AuthModal() {
+  const navigate = useNavigate();
   const [mode, setMode] = useState('landing'); // 'landing', 'login', 'signup'
   
   // Form State
@@ -14,15 +15,14 @@ export default function AuthModal() {
   const [showPassword, setShowPassword] = useState(false);
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
-  const [turnstileToken, setTurnstileToken] = useState(null);
-  
+
   // Wizard State
   const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [animClass, setAnimClass] = useState('step-enter-right');
 
-  const TOTAL_STEPS = 4;
+  const TOTAL_STEPS = 3;
 
   const animateStep = (direction, newStep) => {
     setAnimClass(direction === 'right' ? 'step-exit-left' : 'step-exit-right');
@@ -52,10 +52,6 @@ export default function AuthModal() {
 
   const handleSignupSubmit = async (e) => {
     e.preventDefault();
-    if (!turnstileToken) {
-      setError('Veuillez valider le captcha.');
-      return;
-    }
     setLoading(true);
     setError(null);
     try {
@@ -81,6 +77,8 @@ export default function AuthModal() {
           updated_at: new Date().toISOString()
         });
       }
+
+      navigate('/verify', { state: { email } });
     } catch (err) {
       setError(err.message || "Erreur lors de l'inscription");
     } finally {
@@ -92,7 +90,6 @@ export default function AuthModal() {
     if (step === 1) return firstName.trim().length > 0;
     if (step === 2) return email.includes('@') && email.length > 5;
     if (step === 3) return password.length >= 6;
-    if (step === 4) return turnstileToken !== null;
     return false;
   };
 
@@ -100,7 +97,6 @@ export default function AuthModal() {
     setError(null);
     setStep(1);
     setAnimClass('step-enter-right');
-    setTurnstileToken(null);
     setMode(newMode);
   };
 
@@ -291,7 +287,7 @@ export default function AuthModal() {
                   <label>Mot de passe <span className="text-primary">*</span></label>
                   <div className="input-with-icon input-with-toggle">
                     <Lock size={18} className="input-icon" />
-                    <input 
+                    <input
                       type={showPassword ? 'text' : 'password'}
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
@@ -318,42 +314,22 @@ export default function AuthModal() {
                 </div>
               </div>
             )}
-
-            {step === 4 && (
-              <div className="wizard-step">
-                <div className="step-emoji">🛡️</div>
-                <h3 className="step-title">Vérification de sécurité</h3>
-                <p className="step-subtitle text-secondary">Prouvez que vous êtes humain pour protéger notre communauté</p>
-                <div className="turnstile-wrapper">
-                  <Turnstile 
-                    siteKey={import.meta.env.VITE_TURNSTILE_SITE_KEY || '0x4AAAAAADdYECWgRvvjBv1E'} 
-                    onSuccess={(token) => setTurnstileToken(token)}
-                    options={{ theme: 'auto' }}
-                  />
-                </div>
-                {turnstileToken && (
-                  <div className="captcha-success">
-                    <CheckCircle size={16} /> Vérifié avec succès
-                  </div>
-                )}
-              </div>
-            )}
           </div>
 
           <div className="wizard-actions">
             {step < TOTAL_STEPS ? (
-              <button 
-                type="submit" 
+              <button
+                type="submit"
                 className="btn btn-primary auth-submit w-full"
                 disabled={!isStepValid()}
               >
                 Suivant <ArrowRight size={18} />
               </button>
             ) : (
-              <button 
-                type="submit" 
-                className="btn btn-primary auth-submit w-full glow-pulse"
-                disabled={loading || !turnstileToken}
+              <button
+                type="submit"
+                className="btn btn-primary auth-submit w-full"
+                disabled={loading}
               >
                 {loading ? <div className="spinner"></div> : (
                   <>Créer mon compte <CheckCircle size={18} /></>
