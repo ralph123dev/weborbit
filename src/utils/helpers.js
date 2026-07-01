@@ -66,23 +66,42 @@ export async function uploadToCloudinary(file, onProgress) {
   });
 }
 
-// Helper function to escape HTML special characters
+// Helper function to decode HTML entities that may have been stored in the database
+function decodeHtmlEntities(text) {
+  const entities = {
+    '&amp;': '&',
+    '&lt;': '<',
+    '&gt;': '>',
+    '&quot;': '"',
+    '&#039;': "'",
+    '&#x27;': "'",
+    '&#39;': "'",
+    '&apos;': "'",
+    '&#x2F;': '/',
+    '&#47;': '/'
+  };
+  return text.replace(/&(?:amp|lt|gt|quot|apos|#039|#x27|#39|#x2F|#47);/g, (entity) => entities[entity] || entity);
+}
+
+// Helper function to escape HTML special characters for safe rendering
 function escapeHtml(text) {
   const map = {
     '&': '&amp;',
     '<': '&lt;',
     '>': '&gt;',
-    '"': '&quot;',
-    "'": '&#039;'
+    '"': '&quot;'
   };
-  return text.replace(/[&<>"']/g, (char) => map[char]);
+  return text.replace(/[&<>"]/g, (char) => map[char]);
 }
 
 export function formatTextWithLinks(text) {
   if (!text) return text;
   
-  // First escape all HTML to prevent XSS
-  let escaped = escapeHtml(text);
+  // First decode any pre-existing HTML entities (from mobile app or other sources)
+  let decoded = decodeHtmlEntities(text);
+  
+  // Then escape HTML to prevent XSS
+  let escaped = escapeHtml(decoded);
   
   // Then linkify URLs (match escaped text properly)
   const urlRegex = /(https?:\/\/[^\s<&]+)/g;
@@ -92,7 +111,7 @@ export function formatTextWithLinks(text) {
   });
   
   // Then linkify Hashtags
-  const hashtagRegex = /(#[a-zA-Z0-9_]+)/g;
+  const hashtagRegex = /(#[a-zA-Z0-9_àâäéèêëïîôùûüÿçæœÀÂÄÉÈÊËÏÎÔÙÛÜŸÇÆŒ]+)/g;
   formatted = formatted.replace(hashtagRegex, '<span class="text-primary cursor-pointer hover:underline">$1</span>');
   
   return formatted;

@@ -1,4 +1,4 @@
-import { Download, Home, LogOut, MessageCircle, PlusCircle, Settings, User, UserPlus, Video } from 'lucide-react';
+import { Home, LogOut, MessageCircle, PlusCircle, Settings, User, UserPlus, Video } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import logo from '../assets/logo.png';
@@ -86,14 +86,7 @@ export default function Sidebar({ isOpen, onClose, onCreatePost }) {
     window.location.reload();
   };
 
-  const handleDownloadAPK = () => {
-    const link = document.createElement('a');
-    link.href = 'https://expo.dev/artifacts/eas/kHog5triepqpC5gjU1Ln2J.apk';
-    link.download = 'OrbitPost.apk';
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-  };
+
 
   const handleNavItemClick = (e, item) => {
     if (item.path === '/shorts') {
@@ -230,11 +223,7 @@ export default function Sidebar({ isOpen, onClose, onCreatePost }) {
           <PlusCircle className="nav-icon" size={24} />
           <span className="nav-label font-bold">Créer</span>
         </button>
-        
-        <button className="nav-item download-mobile-btn" onClick={handleDownloadAPK}>
-          <Download className="nav-icon text-primary" size={24} />
-          <span className="nav-label font-bold text-primary">Télécharger APK</span>
-        </button>
+
       </nav>
 
       <GroupListModal isOpen={isGroupListOpen} onClose={() => setIsGroupListOpen(false)} />
