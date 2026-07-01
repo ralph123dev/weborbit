@@ -13,16 +13,13 @@ export default function AuthModal() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
-  const [firstName, setFirstName] = useState('');
-  const [lastName, setLastName] = useState('');
 
   // Wizard State
   const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [animClass, setAnimClass] = useState('step-enter-right');
-
-  const TOTAL_STEPS = 3;
+  const TOTAL_STEPS = 2;
 
   const animateStep = (direction, newStep) => {
     setAnimClass(direction === 'right' ? 'step-exit-left' : 'step-exit-right');
@@ -57,22 +54,16 @@ export default function AuthModal() {
     try {
       const { data, error } = await supabase.auth.signUp({
         email,
-        password,
-        options: {
-          data: {
-            first_name: firstName || email.split('@')[0],
-            last_name: lastName || ''
-          }
-        }
+        password
       });
       if (error) throw error;
       if (data?.user) {
-        const baseName = firstName || data.user.email.split('@')[0];
+        const baseName = data.user.email.split('@')[0];
         await supabase.from('profiles').upsert({
           id: data.user.id,
           email: data.user.email,
-          first_name: firstName || data.user.email.split('@')[0],
-          last_name: lastName || '',
+          first_name: null,
+          last_name: null,
           username: baseName.replace(/\s+/g, '').toLowerCase() + Math.floor(Math.random() * 1000),
           updated_at: new Date().toISOString()
         });
@@ -87,9 +78,8 @@ export default function AuthModal() {
   };
 
   const isStepValid = () => {
-    if (step === 1) return firstName.trim().length > 0;
-    if (step === 2) return email.includes('@') && email.length > 5;
-    if (step === 3) return password.length >= 6;
+    if (step === 1) return email.includes('@') && email.length > 5;
+    if (step === 2) return password.length >= 6;
     return false;
   };
 
@@ -235,31 +225,6 @@ export default function AuthModal() {
           <div className={`wizard-step-wrapper ${animClass}`}>
             {step === 1 && (
               <div className="wizard-step">
-                <div className="step-emoji">👋</div>
-                <h3 className="step-title">Comment vous appelez-vous ?</h3>
-                <p className="step-subtitle text-secondary">On sera ravis de faire votre connaissance</p>
-                <div className="input-group">
-                  <label>Prénom <span className="text-primary">*</span></label>
-                  <input 
-                    type="text" value={firstName}
-                    onChange={(e) => setFirstName(e.target.value)}
-                    placeholder="Ex: John"
-                    autoFocus required
-                  />
-                </div>
-                <div className="input-group">
-                  <label>Nom <span className="text-secondary text-xs">(optionnel)</span></label>
-                  <input 
-                    type="text" value={lastName}
-                    onChange={(e) => setLastName(e.target.value)}
-                    placeholder="Ex: Doe"
-                  />
-                </div>
-              </div>
-            )}
-
-            {step === 2 && (
-              <div className="wizard-step">
                 <div className="step-emoji">📧</div>
                 <h3 className="step-title">Votre adresse email</h3>
                 <p className="step-subtitle text-secondary">Vous recevrez un email de confirmation</p>
@@ -278,7 +243,7 @@ export default function AuthModal() {
               </div>
             )}
 
-            {step === 3 && (
+            {step === 2 && (
               <div className="wizard-step">
                 <div className="step-emoji">🔐</div>
                 <h3 className="step-title">Créez un mot de passe</h3>

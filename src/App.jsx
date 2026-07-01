@@ -18,30 +18,57 @@ import VerifyEmail from './pages/VerifyEmail';
 import Layout from './components/Layout';
 import AuthModal from './components/AuthModal';
 import ProfileSetupModal from './components/ProfileSetupModal';
+import EmailVerificationPopup from './components/EmailVerificationPopup';
 import { useState, useEffect } from 'react';
 import { Toaster, toast } from 'react-hot-toast';
 import { supabase } from './services/supabase';
 import notificationSound from './assets/tir.ogg';
 
 function App() {
-  const { user, profile, loading } = useAuth();
+  const { user, profile, loading, setProfile } = useAuth();
   useTheme(); // Init theme
   
   const [showProfileSetup, setShowProfileSetup] = useState(false);
+  const [showEmailVerification, setShowEmailVerification] = useState(false);
 
   useEffect(() => {
-    if (user && profile && !profile.avatar_url && !localStorage.getItem('avatarSetupSkipped')) {
-      // Check if it's a new account: we can assume if created recently
-      const createdAge = new Date() - new Date(profile.created_at);
-      if (createdAge < 1000 * 60 * 60) { // Less than 1 hour old
-        setShowProfileSetup(true);
+    if (user && profile) {
+      if (profile.is_verified) {
+        if (!profile.first_name || (!profile.avatar_url && !localStorage.getItem('avatarSetupSkipped'))) {
+          setShowProfileSetup(true);
+        } else {
+          setShowProfileSetup(false);
+        }
+      } else {
+        setShowProfileSetup(false);
       }
+    }
+  }, [user, profile]);
+
+  // Show email verification popup for unverified users
+  useEffect(() => {
+    if (user && profile && !profile.is_verified) {
+      setShowEmailVerification(true);
+    } else {
+      setShowEmailVerification(false);
     }
   }, [user, profile]);
 
   const handleSkipSetup = () => {
     localStorage.setItem('avatarSetupSkipped', 'true');
     setShowProfileSetup(false);
+  };
+
+  const handleEmailVerified = () => {
+    setShowEmailVerification(false);
+    // Update profile state to reflect verification
+    if (profile) {
+      setProfile({ ...profile, is_verified: true });
+    }
+    toast.success('Votre compte est maintenant vérifié ! ✅', {
+      style: { borderRadius: '10px', background: '#333', color: '#fff' },
+      duration: 4000,
+    });
   };
 
   // Global Notification Listener
@@ -116,6 +143,12 @@ function App() {
     <Router>
       <Toaster position="top-center" />
       {showProfileSetup && <ProfileSetupModal onClose={handleSkipSetup} />}
+      {showEmailVerification && !showProfileSetup && (
+        <EmailVerificationPopup
+          profile={profile}
+          onVerified={handleEmailVerified}
+        />
+      )}
 
       <Routes>
         {/* Public Embed Pages */}
