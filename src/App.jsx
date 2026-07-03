@@ -1,28 +1,29 @@
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { Navigate, Route, BrowserRouter as Router, Routes } from 'react-router-dom';
 import { useAuth } from './hooks/useAuth';
 import { useTheme } from './hooks/useTheme';
 
 // Pages
 import FeedPage from './pages/FeedPage';
-import ShortsPage from './pages/ShortsPage';
+import GroupFeedPage from './pages/GroupFeedPage';
+import InvitationsPage from './pages/InvitationsPage';
 import MessengerPage from './pages/MessengerPage';
+import PostEmbedPage from './pages/PostEmbedPage';
 import ProfilePage from './pages/ProfilePage';
 import SettingsPage from './pages/SettingsPage';
-import PostEmbedPage from './pages/PostEmbedPage';
 import ShortEmbedPage from './pages/ShortEmbedPage';
-import InvitationsPage from './pages/InvitationsPage';
-import GroupFeedPage from './pages/GroupFeedPage';
+import ShortsPage from './pages/ShortsPage';
 import VerifyEmail from './pages/VerifyEmail';
 
 // Components
-import Layout from './components/Layout';
-import AuthModal from './components/AuthModal';
-import ProfileSetupModal from './components/ProfileSetupModal';
-import EmailVerificationPopup from './components/EmailVerificationPopup';
-import { useState, useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { Toaster, toast } from 'react-hot-toast';
-import { supabase } from './services/supabase';
 import notificationSound from './assets/tir.ogg';
+import AuthModal from './components/AuthModal';
+import EmailVerificationPopup from './components/EmailVerificationPopup';
+import Layout from './components/Layout';
+import MaintenanceModal from './components/MaintenanceModal';
+import ProfileSetupModal from './components/ProfileSetupModal';
+import { supabase } from './services/supabase';
 
 function App() {
   const { user, profile, loading, setProfile } = useAuth();
@@ -131,6 +132,10 @@ function App() {
     };
   }, [user]);
 
+  if (MAINTENANCE_ACTIVE) {
+    return <MaintenanceModal />;
+  }
+
   if (loading) {
     return (
       <div className="flex justify-center items-center" style={{ height: '100vh' }}>
@@ -142,6 +147,7 @@ function App() {
   return (
     <Router>
       <Toaster position="top-center" />
+      <MaintenanceModal />
       {showProfileSetup && <ProfileSetupModal onClose={handleSkipSetup} />}
       {showEmailVerification && !showProfileSetup && (
         <EmailVerificationPopup
