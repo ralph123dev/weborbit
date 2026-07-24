@@ -25,6 +25,8 @@ import MaintenanceModal from './components/MaintenanceModal';
 import ProfileSetupModal from './components/ProfileSetupModal';
 import { supabase } from './services/supabase';
 
+const MAINTENANCE_ACTIVE = import.meta.env.VITE_MAINTENANCE_ACTIVE === 'true';
+
 function App() {
   const { user, profile, loading, setProfile } = useAuth();
   useTheme(); // Init theme
@@ -147,7 +149,6 @@ function App() {
   return (
     <Router>
       <Toaster position="top-center" />
-      <MaintenanceModal />
       {showProfileSetup && <ProfileSetupModal onClose={handleSkipSetup} />}
       {showEmailVerification && !showProfileSetup && (
         <EmailVerificationPopup

@@ -517,6 +517,27 @@
   margin-top: 1.5rem;
 }
 
+.input-group.invalid label {
+  color: #ff3b30;
+}
+
+.input-group.invalid input {
+  border-color: #ff3b30;
+  box-shadow: 0 0 0 4px rgba(255, 59, 48, 0.14);
+}
+
+.input-group.shake {
+  animation: shakeInvalid 0.35s ease-in-out;
+}
+
+@keyframes shakeInvalid {
+  0%, 100% { transform: translateX(0); }
+  20% { transform: translateX(-8px); }
+  40% { transform: translateX(8px); }
+  60% { transform: translateX(-4px); }
+  80% { transform: translateX(4px); }
+}
+
 .glow-pulse:not(:disabled) {
   animation: glowBtn 2s infinite;
 }

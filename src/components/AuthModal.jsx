@@ -19,6 +19,7 @@ export default function AuthModal() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [animClass, setAnimClass] = useState('step-enter-right');
+  const [invalidField, setInvalidField] = useState(null);
   const TOTAL_STEPS = 2;
 
   const animateStep = (direction, newStep) => {
@@ -51,6 +52,14 @@ export default function AuthModal() {
     e.preventDefault();
     setLoading(true);
     setError(null);
+
+    const invalid = validateStep(step);
+    if (invalid) {
+      triggerInvalidField(invalid);
+      setLoading(false);
+      return;
+    }
+
     try {
       const { data, error } = await supabase.auth.signUp({
         email,
@@ -77,17 +86,51 @@ export default function AuthModal() {
     }
   };
 
-  const isStepValid = () => {
-    if (step === 1) return email.includes('@') && email.length > 5;
-    if (step === 2) return password.length >= 6;
-    return false;
+  const validateStep = (currentStep) => {
+    if (currentStep === 1) {
+      const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!email || !emailPattern.test(email)) {
+        return 'email';
+      }
+    }
+
+    if (currentStep === 2) {
+      const passwordPattern = /^(?=.*[A-Z])(?=.*\d).{8,}$/;
+      if (!password || !passwordPattern.test(password)) {
+        return 'password';
+      }
+    }
+
+    return null;
   };
+
+  const isStepValid = () => !validateStep(step);
 
   const goTo = (newMode) => {
     setError(null);
+    setInvalidField(null);
     setStep(1);
     setAnimClass('step-enter-right');
     setMode(newMode);
+  };
+
+  const triggerInvalidField = (field) => {
+    setInvalidField(field);
+    setError('Veuillez remplir correctement le champ requis.');
+    window.requestAnimationFrame(() => {
+      setInvalidField(field);
+    });
+    setTimeout(() => setInvalidField(null), 450);
+  };
+
+  const handleNextStep = (e) => {
+    e.preventDefault();
+    const invalid = validateStep(step);
+    if (invalid) {
+      triggerInvalidField(invalid);
+      return;
+    }
+    nextStep();
   };
 
   // --- LANDING PAGE ---
@@ -221,14 +264,14 @@ export default function AuthModal() {
 
         {error && <div className="auth-error">{error}</div>}
 
-        <form onSubmit={step === TOTAL_STEPS ? handleSignupSubmit : (e) => { e.preventDefault(); nextStep(); }}>
+        <form onSubmit={step === TOTAL_STEPS ? handleSignupSubmit : handleNextStep}>
           <div className={`wizard-step-wrapper ${animClass}`}>
             {step === 1 && (
               <div className="wizard-step">
                 <div className="step-emoji">📧</div>
                 <h3 className="step-title">Votre adresse email</h3>
                 <p className="step-subtitle text-secondary">Vous recevrez un email de confirmation</p>
-                <div className="input-group">
+                <div className={`input-group ${invalidField === 'email' ? 'invalid shake' : ''}`}>
                   <label>Email <span className="text-primary">*</span></label>
                   <div className="input-with-icon">
                     <Mail size={18} className="input-icon" />
@@ -236,19 +279,21 @@ export default function AuthModal() {
                       type="email" value={email}
                       onChange={(e) => setEmail(e.target.value)}
                       placeholder="votre@email.com"
-                      autoFocus required
+                      autoFocus
+                      required
+                      aria-invalid={invalidField === 'email'}
                     />
                   </div>
                 </div>
               </div>
             )}
-
+ 
             {step === 2 && (
               <div className="wizard-step">
                 <div className="step-emoji">🔐</div>
                 <h3 className="step-title">Créez un mot de passe</h3>
-                <p className="step-subtitle text-secondary">6 caractères minimum pour protéger votre compte</p>
-                <div className="input-group">
+                <p className="step-subtitle text-secondary">8 caractères, une majuscule et un chiffre pour sécuriser votre compte</p>
+                <div className={`input-group ${invalidField === 'password' ? 'invalid shake' : ''}`}>
                   <label>Mot de passe <span className="text-primary">*</span></label>
                   <div className="input-with-icon input-with-toggle">
                     <Lock size={18} className="input-icon" />
@@ -259,7 +304,8 @@ export default function AuthModal() {
                       placeholder="••••••••"
                       autoFocus
                       required
-                      minLength={6}
+                      minLength={8}
+                      aria-invalid={invalidField === 'password'}
                     />
                     <button
                       type="button"
@@ -272,21 +318,20 @@ export default function AuthModal() {
                   </div>
                 </div>
                 <div className="password-strength">
-                  <div className={`strength-bar ${password.length >= 6 ? 'good' : password.length >= 3 ? 'medium' : ''}`}></div>
+                  <div className={`strength-bar ${password.length >= 8 ? 'good' : password.length >= 5 ? 'medium' : ''}`}></div>
                   <span className="text-xs text-secondary">
-                    {password.length === 0 ? '' : password.length < 6 ? 'Trop court' : 'Bon mot de passe ✓'}
+                    {password.length === 0 ? '' : password.length < 8 ? 'Trop court' : 'Bon mot de passe ✓'}
                   </span>
                 </div>
               </div>
             )}
           </div>
-
+ 
           <div className="wizard-actions">
             {step < TOTAL_STEPS ? (
               <button
                 type="submit"
                 className="btn btn-primary auth-submit w-full"
-                disabled={!isStepValid()}
               >
                 Suivant <ArrowRight size={18} />
               </button>
