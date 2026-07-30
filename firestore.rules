@@ -1,0 +1,24 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // OTP collection - secure access
+    match /otps/{email} {
+      // Only Cloud Functions can read/write OTP data
+      // Client cannot directly access OTP collection
+      allow read, write: if false;
+    }
+
+    // Users collection (optional - for user profile data)
+    match /users/{userId} {
+      // User can read their own data
+      allow read: if request.auth != null && request.auth.uid == userId;
+      // User can write their own data
+      allow write: if request.auth != null && request.auth.uid == userId;
+    }
+
+    // Default deny all other access
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

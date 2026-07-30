@@ -11,7 +11,18 @@ node_modules
 dist
 dist-ssr
 *.local
-weborbit 
+weborbit
+
+# Firebase
+firebase-debug.log
+firebase-functions-debug.log
+.firebase/
+.firebaserc
+
+# Environment variables
+.env
+.env.local
+.env.*.local
 
 # Editor directories and files
 .vscode/*
