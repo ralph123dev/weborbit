@@ -25,7 +25,9 @@ import MaintenanceModal from './components/MaintenanceModal';
 import ProfileSetupModal from './components/ProfileSetupModal';
 import { supabase } from './services/supabase';
 
-const MAINTENANCE_ACTIVE = import.meta.env.VITE_MAINTENANCE_ACTIVE === 'true';
+const MAINTENANCE_ACTIVE =
+  import.meta.env.VITE_MAINTENANCE_ACTIVE === 'true' ||
+  import.meta.env.VITE_MAINTENANCE_ACTIVE === '1';
 
 function App() {
   const { user, profile, loading, setProfile } = useAuth();
