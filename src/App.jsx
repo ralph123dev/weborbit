@@ -59,6 +59,14 @@ function App() {
     }
   }, [user, profile]);
 
+  const [showAuthModal, setShowAuthModal] = useState(false);
+
+  useEffect(() => {
+    const handleOpenAuth = () => setShowAuthModal(true);
+    window.addEventListener('open-auth-modal', handleOpenAuth);
+    return () => window.removeEventListener('open-auth-modal', handleOpenAuth);
+  }, []);
+
   const handleSkipSetup = () => {
     localStorage.setItem('avatarSetupSkipped', 'true');
     setShowProfileSetup(false);
@@ -148,6 +156,19 @@ function App() {
     );
   }
 
+  function ProtectedRoute({ user, children }) {
+    useEffect(() => {
+      if (!user) {
+        window.dispatchEvent(new Event('open-auth-modal'));
+      }
+    }, [user]);
+
+    if (!user) {
+      return <Navigate to="/" replace />;
+    }
+    return children;
+  }
+
   return (
     <Router>
       <Toaster position="top-center" />
@@ -158,6 +179,9 @@ function App() {
           onVerified={handleEmailVerified}
         />
       )}
+      {showAuthModal && (
+        <AuthModal isOverlay={true} onClose={() => setShowAuthModal(false)} />
+      )}
 
       <Routes>
         {/* Public Embed Pages */}
@@ -165,24 +189,32 @@ function App() {
         <Route path="/short/:shortId" element={<ShortEmbedPage />} />
         <Route path="/verify" element={<VerifyEmail />} />
 
-        {/* Private Routes requiring Authentication */}
+        {/* Public/Private routes nested in Layout */}
         <Route path="/*" element={
-          user ? (
-            <Layout>
-              <Routes>
-                <Route path="/" element={<FeedPage />} />
-                <Route path="/shorts" element={<ShortsPage />} />
-                <Route path="/messenger" element={<MessengerPage />} />
-                <Route path="/profile/:userId" element={<ProfilePage />} />
-                <Route path="/group/:groupId" element={<GroupFeedPage />} />
-                <Route path="/settings" element={<SettingsPage />} />
-                <Route path="/invitations" element={<InvitationsPage />} />
-                <Route path="*" element={<Navigate to="/" replace />} />
-              </Routes>
-            </Layout>
-          ) : (
-            <AuthModal />
-          )
+          <Layout>
+            <Routes>
+              <Route path="/" element={<FeedPage />} />
+              <Route path="/shorts" element={<ShortsPage />} />
+              <Route path="/messenger" element={
+                <ProtectedRoute user={user}>
+                  <MessengerPage />
+                </ProtectedRoute>
+              } />
+              <Route path="/profile/:userId" element={<ProfilePage />} />
+              <Route path="/group/:groupId" element={<GroupFeedPage />} />
+              <Route path="/settings" element={
+                <ProtectedRoute user={user}>
+                  <SettingsPage />
+                </ProtectedRoute>
+              } />
+              <Route path="/invitations" element={
+                <ProtectedRoute user={user}>
+                  <InvitationsPage />
+                </ProtectedRoute>
+              } />
+              <Route path="*" element={<Navigate to="/" replace />} />
+            </Routes>
+          </Layout>
         } />
       </Routes>
     </Router>

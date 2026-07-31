@@ -270,7 +270,10 @@ export default function GroupFeedPage() {
   };
 
   const handleLike = async (postId, currentLikes) => {
-    if (!user) return;
+    if (!user) {
+      window.dispatchEvent(new Event('open-auth-modal'));
+      return;
+    }
     
     // Optimistic UI update
     setPosts(prev => prev.map(p => {
@@ -429,6 +432,10 @@ export default function GroupFeedPage() {
 
   const handlePostComment = async (e) => {
     e.preventDefault();
+    if (!user) {
+      window.dispatchEvent(new Event('open-auth-modal'));
+      return;
+    }
     if ((!newComment.trim() && !commentAudioBlob) || !activeCommentPost) return;
     setIsSubmittingComment(true);
     try {
@@ -651,7 +658,10 @@ export default function GroupFeedPage() {
   const isMember = user && group && (group.created_by === user.id || groupMembers.some(m => m.user_id === user.id));
 
   const handleJoinGroup = async () => {
-    if (!user) return toast.error('Connectez-vous pour rejoindre ce groupe.');
+    if (!user) {
+      window.dispatchEvent(new Event('open-auth-modal'));
+      return;
+    }
     try {
       const { error } = await supabase.from('group_members').insert({
         group_id: groupId,

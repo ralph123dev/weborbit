@@ -95,6 +95,13 @@ export default function Sidebar({ isOpen, onClose, onCreatePost }) {
       return;
     }
 
+    if (!user && (item.label === 'Profil' || item.label === 'Messenger' || item.label === 'Paramètres' || item.label === 'Invitations')) {
+      e.preventDefault();
+      window.dispatchEvent(new Event('open-auth-modal'));
+      if (window.innerWidth <= 768) onClose();
+      return;
+    }
+
     if (window.innerWidth <= 768) onClose();
   };
 
@@ -102,7 +109,7 @@ export default function Sidebar({ isOpen, onClose, onCreatePost }) {
     { path: '/', icon: Home, label: 'Accueil' },
     { path: '/shorts', icon: Video, label: 'Shorts' },
     { path: '/messenger', icon: MessageCircle, label: 'Messenger' },
-    { path: `/profile/${user?.id}`, icon: User, label: 'Profil' },
+    { path: `/profile/${user?.id || 'undefined'}`, icon: User, label: 'Profil' },
     { path: '/settings', icon: Settings, label: 'Paramètres' },
     { path: '/invitations', icon: UserPlus, label: 'Invitations' },
   ];
@@ -142,7 +149,11 @@ export default function Sidebar({ isOpen, onClose, onCreatePost }) {
                 onClick={(e) => {
                   e.preventDefault();
                   e.stopPropagation();
-                  window.dispatchEvent(new Event('open-publish-short-modal'));
+                  if (!user) {
+                    window.dispatchEvent(new Event('open-auth-modal'));
+                  } else {
+                    window.dispatchEvent(new Event('open-publish-short-modal'));
+                  }
                   if (window.innerWidth <= 768) onClose();
                 }}
                 className="nav-item publish-short-nav-btn"
@@ -191,7 +202,11 @@ export default function Sidebar({ isOpen, onClose, onCreatePost }) {
             <button
               className="nav-item group-submenu-item"
               onClick={() => {
-                setIsGroupModalOpen(true);
+                if (!user) {
+                  window.dispatchEvent(new Event('open-auth-modal'));
+                } else {
+                  setIsGroupModalOpen(true);
+                }
                 if (window.innerWidth <= 768) onClose();
               }}
               type="button"
@@ -204,7 +219,11 @@ export default function Sidebar({ isOpen, onClose, onCreatePost }) {
             <button
               className="nav-item group-submenu-item"
               onClick={() => {
-                setIsGroupListOpen(true);
+                if (!user) {
+                  window.dispatchEvent(new Event('open-auth-modal'));
+                } else {
+                  setIsGroupListOpen(true);
+                }
                 if (window.innerWidth <= 768) onClose();
               }}
               type="button"
@@ -219,7 +238,14 @@ export default function Sidebar({ isOpen, onClose, onCreatePost }) {
 
         <div className="nav-divider"></div>
 
-        <button className="nav-item create-post-btn" onClick={() => { onCreatePost?.(); if (window.innerWidth <= 768) onClose(); }}>
+        <button className="nav-item create-post-btn" onClick={() => { 
+          if (!user) {
+            window.dispatchEvent(new Event('open-auth-modal'));
+          } else {
+            onCreatePost?.(); 
+          }
+          if (window.innerWidth <= 768) onClose(); 
+        }}>
           <PlusCircle className="nav-icon" size={24} />
           <span className="nav-label font-bold">Créer</span>
         </button>
@@ -229,7 +255,7 @@ export default function Sidebar({ isOpen, onClose, onCreatePost }) {
       <GroupListModal isOpen={isGroupListOpen} onClose={() => setIsGroupListOpen(false)} />
       <GroupCreateModal isOpen={isGroupModalOpen} onClose={() => setIsGroupModalOpen(false)} />
 
-      {profile && (
+      {profile ? (
         <div className="sidebar-footer">
           <div className="user-mini-profile">
             <img 
@@ -245,6 +271,16 @@ export default function Sidebar({ isOpen, onClose, onCreatePost }) {
           </div>
           <button className="logout-btn" onClick={handleLogout} title="Déconnexion">
             <LogOut size={20} />
+          </button>
+        </div>
+      ) : (
+        <div className="sidebar-footer" style={{ padding: '1rem', justifyContent: 'center' }}>
+          <button 
+            className="btn btn-primary w-full flex items-center justify-center gap-2" 
+            onClick={() => window.dispatchEvent(new Event('open-auth-modal'))}
+            style={{ borderRadius: 'var(--radius-full)', fontWeight: 'bold', minHeight: '44px' }}
+          >
+            Se connecter
           </button>
         </div>
       )}

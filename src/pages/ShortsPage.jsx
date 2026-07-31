@@ -265,7 +265,10 @@ export default function ShortsPage() {
   };
 
   const handleLike = async (item) => {
-    if (!user) return toast.error('Connectez-vous pour liker');
+    if (!user) {
+      window.dispatchEvent(new Event('open-auth-modal'));
+      return;
+    }
     
     // Optimistic UI update
     setShorts(prev => prev.map(s => {
@@ -300,7 +303,10 @@ export default function ShortsPage() {
   };
 
   const handleReportShort = async (item) => {
-    if (!user) return toast.error('Connectez-vous pour signaler');
+    if (!user) {
+      window.dispatchEvent(new Event('open-auth-modal'));
+      return;
+    }
     try {
       await supabase.from('reports_posts').insert({
         post_id: item.id,
@@ -315,7 +321,10 @@ export default function ShortsPage() {
   };
 
   const handleSubscribe = async (creatorId, username, isFollowing) => {
-    if (!user) return toast.error('Connectez-vous pour vous abonner');
+    if (!user) {
+      window.dispatchEvent(new Event('open-auth-modal'));
+      return;
+    }
     if (user.id === creatorId) return toast.error('Vous ne pouvez pas vous abonner à votre propre profil');
     
     const increment = isFollowing ? -1 : 1;
@@ -386,7 +395,10 @@ export default function ShortsPage() {
 
   const handlePostCommentContent = async (shortItem, text) => {
     if (!text.trim()) return;
-    if (!user) return toast.error('Connectez-vous pour commenter');
+    if (!user) {
+      window.dispatchEvent(new Event('open-auth-modal'));
+      return;
+    }
 
     // Update comments count in UI
     setShorts(prev => prev.map(s => {

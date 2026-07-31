@@ -1,25 +1,39 @@
 import { useEffect, useState } from 'react';
+import { useAuth } from '../hooks/useAuth';
 import CreatePostModal from './CreatePostModal';
 import './Layout.css';
 import PublishShortModal from './PublishShortModal';
 import Sidebar from './Sidebar';
 
 export default function Layout({ children }) {
+  const { user } = useAuth();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [isPublishShortModalOpen, setIsPublishShortModalOpen] = useState(false);
 
   useEffect(() => {
-    const handleOpenModal = () => setIsCreateModalOpen(true);
+    const handleOpenModal = () => {
+      if (!user) {
+        window.dispatchEvent(new Event('open-auth-modal'));
+      } else {
+        setIsCreateModalOpen(true);
+      }
+    };
     window.addEventListener('openCreatePostModal', handleOpenModal);
     return () => window.removeEventListener('openCreatePostModal', handleOpenModal);
-  }, []);
+  }, [user]);
 
   useEffect(() => {
-    const handleOpenPublishShort = () => setIsPublishShortModalOpen(true);
+    const handleOpenPublishShort = () => {
+      if (!user) {
+        window.dispatchEvent(new Event('open-auth-modal'));
+      } else {
+        setIsPublishShortModalOpen(true);
+      }
+    };
     window.addEventListener('open-publish-short-modal', handleOpenPublishShort);
     return () => window.removeEventListener('open-publish-short-modal', handleOpenPublishShort);
-  }, []);
+  }, [user]);
 
   useEffect(() => {
     // sidebar open handled by parent state; legacy listener removed

@@ -2,10 +2,10 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../services/supabase';
 import logo from '../assets/logo.png';
-import { ArrowRight, ArrowLeft, CheckCircle, Mail, Lock, User, Eye, EyeOff } from 'lucide-react';
+import { ArrowRight, ArrowLeft, CheckCircle, Mail, Lock, User, Eye, EyeOff, X } from 'lucide-react';
 import './AuthModal.css';
 
-export default function AuthModal() {
+export default function AuthModal({ isOverlay, onClose }) {
   const navigate = useNavigate();
   const [mode, setMode] = useState('landing'); // 'landing', 'login', 'signup'
   
@@ -135,6 +135,40 @@ export default function AuthModal() {
 
   // --- LANDING PAGE ---
   if (mode === 'landing') {
+    if (isOverlay) {
+      return (
+        <div className="auth-page-full" style={{ background: 'rgba(0, 0, 0, 0.75)', backdropFilter: 'blur(8px)', zIndex: 9999 }}>
+          <div className="auth-page-card glass page-enter" style={{ position: 'relative' }}>
+            <button 
+              className="absolute top-4 right-4 text-secondary hover:text-white transition-colors"
+              style={{ position: 'absolute', top: '1.25rem', right: '1.25rem', background: 'transparent', border: 'none', cursor: 'pointer', color: 'var(--text-secondary)' }}
+              onClick={onClose}
+              title="Fermer"
+            >
+              <X size={24} />
+            </button>
+            <div className="auth-header text-center">
+              <img src={logo} alt="Orbit" className="auth-logo-small" />
+              <h2 className="font-black text-2xl mt-4">Rejoignez Orbit Post</h2>
+              <p className="text-secondary mt-2">Partagez, découvrez et connectez-vous avec d'autres utilisateurs.</p>
+            </div>
+            
+            <button className="landing-btn landing-btn-login" onClick={() => goTo('login')}>
+              <Mail size={20} />
+              Se connecter
+            </button>
+
+            <div className="landing-divider"><span>ou</span></div>
+
+            <button className="landing-btn landing-btn-signup" onClick={() => goTo('signup')}>
+              <User size={20} />
+              Créer un nouveau compte
+            </button>
+          </div>
+        </div>
+      );
+    }
+
     return (
       <div className="auth-landing">
         <div className="auth-landing-left">
@@ -174,8 +208,18 @@ export default function AuthModal() {
   // --- LOGIN PAGE ---
   if (mode === 'login') {
     return (
-      <div className="auth-page-full">
-        <div className="auth-page-card glass page-enter">
+      <div className="auth-page-full" style={isOverlay ? { background: 'rgba(0, 0, 0, 0.75)', backdropFilter: 'blur(8px)', zIndex: 9999 } : {}}>
+        <div className="auth-page-card glass page-enter" style={{ position: 'relative' }}>
+          {isOverlay && (
+            <button 
+              className="absolute top-4 right-4 text-secondary hover:text-white transition-colors"
+              style={{ position: 'absolute', top: '1.25rem', right: '1.25rem', background: 'transparent', border: 'none', cursor: 'pointer', color: 'var(--text-secondary)' }}
+              onClick={onClose}
+              title="Fermer"
+            >
+              <X size={24} />
+            </button>
+          )}
           <button className="auth-back-btn" onClick={() => goTo('landing')}>
             <ArrowLeft size={20} /> Retour
           </button>
@@ -239,8 +283,18 @@ export default function AuthModal() {
 
   // --- SIGNUP WIZARD ---
   return (
-    <div className="auth-page-full">
-      <div className="auth-page-card glass page-enter">
+    <div className="auth-page-full" style={isOverlay ? { background: 'rgba(0, 0, 0, 0.75)', backdropFilter: 'blur(8px)', zIndex: 9999 } : {}}>
+      <div className="auth-page-card glass page-enter" style={{ position: 'relative' }}>
+        {isOverlay && (
+          <button 
+            className="absolute top-4 right-4 text-secondary hover:text-white transition-colors"
+            style={{ position: 'absolute', top: '1.25rem', right: '1.25rem', background: 'transparent', border: 'none', cursor: 'pointer', color: 'var(--text-secondary)' }}
+            onClick={onClose}
+            title="Fermer"
+          >
+            <X size={24} />
+          </button>
+        )}
         <button className="auth-back-btn" onClick={() => step > 1 ? prevStep() : goTo('landing')}>
           <ArrowLeft size={20} /> {step > 1 ? 'Retour' : 'Accueil'}
         </button>

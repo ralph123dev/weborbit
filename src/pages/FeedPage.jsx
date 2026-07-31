@@ -180,7 +180,10 @@ export default function FeedPage() {
   };
 
   const handleLike = async (postId, currentLikes) => {
-    if (!user) return;
+    if (!user) {
+      window.dispatchEvent(new Event('open-auth-modal'));
+      return;
+    }
     
     // Optimistic UI update
     setPosts(prev => prev.map(p => {
@@ -339,6 +342,10 @@ export default function FeedPage() {
 
   const handlePostComment = async (e) => {
     e.preventDefault();
+    if (!user) {
+      window.dispatchEvent(new Event('open-auth-modal'));
+      return;
+    }
     if ((!newComment.trim() && !commentAudioBlob) || !activeCommentPost) return;
     setIsSubmittingComment(true);
     try {
@@ -470,7 +477,11 @@ export default function FeedPage() {
   };
 
   const handleSendInvitation = async () => {
-    if (!user || !profilePanel) return;
+    if (!user) {
+      window.dispatchEvent(new Event('open-auth-modal'));
+      return;
+    }
+    if (!profilePanel) return;
     try {
       const { data, error } = await supabase
         .from('invitations')
@@ -501,7 +512,11 @@ export default function FeedPage() {
   };
 
   const handleCancelInvitation = async () => {
-    if (!user || !invitation) return;
+    if (!user) {
+      window.dispatchEvent(new Event('open-auth-modal'));
+      return;
+    }
+    if (!invitation) return;
     try {
       const { error } = await supabase
         .from('invitations')
@@ -582,6 +597,10 @@ export default function FeedPage() {
       
       <div className="feed-content">
         <div className="composer glass cursor-pointer transition-transform hover:scale-[1.01]" onClick={() => {
+          if (!user) {
+            window.dispatchEvent(new Event('open-auth-modal'));
+            return;
+          }
           if (window.innerWidth <= 768) {
             setShowMobileComposer(true);
           } else {
@@ -906,7 +925,13 @@ export default function FeedPage() {
                         {canReplyTo(comment, commentMap) && (
                           <button 
                             className="reply-btn text-xs text-secondary font-bold"
-                            onClick={() => setReplyingTo(comment)}
+                            onClick={() => {
+                              if (!user) {
+                                window.dispatchEvent(new Event('open-auth-modal'));
+                                return;
+                              }
+                              setReplyingTo(comment);
+                            }}
                           >
                             Répondre
                           </button>
@@ -949,6 +974,10 @@ export default function FeedPage() {
                 type="button" 
                 className="w-10 h-10 rounded-full flex items-center justify-center transition-all duration-300 flex-shrink-0 bg-white/5 border border-white/10 text-primary hover:bg-primary/20 hover:border-primary/50 hover:scale-105 shadow-sm"
                 onClick={() => {
+                  if (!user) {
+                    window.dispatchEvent(new Event('open-auth-modal'));
+                    return;
+                  }
                   setShowVoiceModal(true);
                   startRecordingComment();
                 }}

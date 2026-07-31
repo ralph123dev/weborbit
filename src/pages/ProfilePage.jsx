@@ -66,6 +66,10 @@ export default function ProfilePage() {
   };
 
   const handleFollow = () => {
+    if (!user) {
+      window.dispatchEvent(new Event('open-auth-modal'));
+      return;
+    }
     // Dummy toggle since we don't have a fully defined follow system here yet
     setIsFollowing(!isFollowing);
     setStats(prev => ({ ...prev, followers: prev.followers + (isFollowing ? -1 : 1) }));
