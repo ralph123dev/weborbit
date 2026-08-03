@@ -2,8 +2,6 @@ import { Image as ImageIcon, Mic, Sparkles, X } from 'lucide-react';
 import { useRef, useState } from 'react';
 import { toast } from 'react-hot-toast';
 import { useAuth } from '../hooks/useAuth';
-import { supabase } from '../services/supabase';
-import { uploadToCloudinary } from '../utils/helpers';
 import './CreatePostModal.css';
 import CustomAudioPlayer from './CustomAudioPlayer';
 
@@ -73,57 +71,8 @@ export default function CreatePostModal({ isOpen, onClose, groupId }) {
   const handlePublish = async () => {
     if ((!content.trim() && selectedImages.length === 0 && !audioBlob) || !user) return;
 
-    setIsPublishing(true);
-    try {
-      const uploadedImageUrls = [];
-      for (const file of selectedImages) {
-        const url = await uploadToCloudinary(file);
-        uploadedImageUrls.push(url);
-      }
-
-      let audioUrl = null;
-      if (audioBlob) {
-        audioUrl = await uploadToCloudinary(audioBlob);
-      }
-
-      const postData = {
-        content: content.trim(),
-        user_id: user.id,
-        image_urls: uploadedImageUrls,
-        image_url: uploadedImageUrls[0] || ''
-      };
-
-      if (groupId) {
-        postData.group_id = groupId;
-      }
-
-      if (audioUrl) {
-        postData.audio_url = audioUrl;
-      }
-
-      let { error } = await supabase.from('posts').insert(postData);
-
-      // If audio_url column doesn't exist, retry without it
-      if (error && error.code === 'PGRST204' && audioUrl) {
-        toast.error("La colonne audio n'existe pas encore. Publication sans audio...");
-        delete postData.audio_url;
-        const retry = await supabase.from('posts').insert(postData);
-        error = retry.error;
-      }
-
-      if (error) throw error;
-
-      toast.success('Publication réussie ! 🎉');
-      setContent('');
-      setSelectedImages([]);
-      setAudioBlob(null);
-      onClose();
-    } catch (err) {
-      console.error('Error publishing post:', err);
-      toast.error("Une erreur est survenue lors de la publication.");
-    } finally {
-      setIsPublishing(false);
-    }
+    toast.error('Le service de publication est actuellement en maintenance.');
+    return;
   };
 
   const handleOverlayClick = (e) => {
