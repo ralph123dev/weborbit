@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { supabase } from '../services/supabase';
 import { useAuth } from '../hooks/useAuth';
 import { uploadToCloudinary } from '../utils/helpers';
-import { Camera, ArrowRight, User, Calendar, Image as ImageIcon } from 'lucide-react';
+import { Camera, ArrowRight, User, Calendar, Phone, Image as ImageIcon } from 'lucide-react';
 import './ProfileSetupModal.css';
 
 export default function ProfileSetupModal({ onClose }) {
@@ -15,7 +15,8 @@ export default function ProfileSetupModal({ onClose }) {
   const [formData, setFormData] = useState({
     first_name: profile?.first_name || '',
     last_name: profile?.last_name || '',
-    age: profile?.age || ''
+    age: profile?.age || '',
+    phone: profile?.phone || ''
   });
 
   const handleImageSelect = (e) => {
@@ -58,7 +59,8 @@ export default function ProfileSetupModal({ onClose }) {
         first_name: formData.first_name.trim(),
         last_name: formData.last_name.trim(),
         age: Number(formData.age),
-        avatar_url: url
+        avatar_url: url,
+        phone: formData.phone.trim() || null
       };
 
       const { error: updateError } = await supabase
@@ -67,16 +69,25 @@ export default function ProfileSetupModal({ onClose }) {
         .eq('id', user.id);
 
       if (updateError) {
-        // If the age column doesn't exist yet, catch the specific PGRST204/column does not exist error
-        // Or if it's just a general error.
-        if (updateError.message.includes('age')) {
-           console.warn("La colonne 'age' n'existe pas dans la base de données. Sauvegarde sans l'âge.");
-           const fallbackUpdates = { ...updates };
-           delete fallbackUpdates.age;
-           await supabase.from('profiles').update(fallbackUpdates).eq('id', user.id);
-        } else {
-           throw updateError;
+        console.warn("La mise à jour a échoué (probablement une colonne manquante comme 'age' ou 'phone'). Tentative avec les champs de base uniquement...", updateError);
+        
+        const fallbackUpdates = {
+          first_name: formData.first_name.trim(),
+          last_name: formData.last_name.trim(),
+          avatar_url: url
+        };
+        
+        const { error: fallbackError } = await supabase
+          .from('profiles')
+          .update(fallbackUpdates)
+          .eq('id', user.id);
+          
+        if (fallbackError) {
+          throw fallbackError;
         }
+        
+        // On met à jour l'objet updates pour le state local avec ce qui a réussi
+        Object.assign(updates, fallbackUpdates);
       }
 
       // Update local profile state if setProfile is available
@@ -169,6 +180,21 @@ export default function ProfileSetupModal({ onClose }) {
               />
             </div>
             <span className="text-xs text-secondary mt-1 ml-1">Vous devez avoir au moins 13 ans.</span>
+          </div>
+
+          <div className="profile-input-group">
+            <label>Numéro de téléphone</label>
+            <div className="profile-input-wrapper">
+              <Phone size={18} className="profile-input-icon" />
+              <input 
+                type="tel" 
+                name="phone"
+                value={formData.phone}
+                onChange={handleInputChange}
+                placeholder="+33 6 12 34 56 78"
+              />
+            </div>
+            <span className="text-xs text-secondary mt-1 ml-1">Optionnel — ne sera pas affiché publiquement.</span>
           </div>
 
           <button

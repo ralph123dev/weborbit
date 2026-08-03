@@ -255,24 +255,33 @@ export default function Sidebar({ isOpen, onClose, onCreatePost }) {
       <GroupListModal isOpen={isGroupListOpen} onClose={() => setIsGroupListOpen(false)} />
       <GroupCreateModal isOpen={isGroupModalOpen} onClose={() => setIsGroupModalOpen(false)} />
 
-      {profile ? (
-        <div className="sidebar-footer">
-          <div className="user-mini-profile">
-            <img 
-              src={profile.avatar_url || 'https://static.vecteezy.com/system/resources/thumbnails/004/607/791/small_2x/man-face-emotive-icon-smiling-male-character-in-blue-shirt-flat-illustration-isolated-on-white-happy-human-psychological-portrait-positive-emotions-user-avatar-for-app-web-design-vector.jpg'} 
-              alt={profile.first_name || 'User'} 
-              className="user-avatar"
-              onError={(e) => e.target.src = 'https://static.vecteezy.com/system/resources/thumbnails/004/607/791/small_2x/man-face-emotive-icon-smiling-male-character-in-blue-shirt-flat-illustration-isolated-on-white-happy-human-psychological-portrait-positive-emotions-user-avatar-for-app-web-design-vector.jpg'}
-            />
-            <div className="user-info">
-              <div className="user-name font-bold">{profile.first_name} {profile.last_name}</div>
-              <div className="user-handle text-secondary">@{profile.username || 'user'}</div>
+      {user ? (
+        profile ? (
+          <div className="sidebar-footer">
+            <div className="user-mini-profile">
+              <img 
+                src={profile.avatar_url || 'https://static.vecteezy.com/system/resources/thumbnails/004/607/791/small_2x/man-face-emotive-icon-smiling-male-character-in-blue-shirt-flat-illustration-isolated-on-white-happy-human-psychological-portrait-positive-emotions-user-avatar-for-app-web-design-vector.jpg'} 
+                alt={profile.first_name || 'User'} 
+                className="user-avatar"
+                onError={(e) => e.target.src = 'https://static.vecteezy.com/system/resources/thumbnails/004/607/791/small_2x/man-face-emotive-icon-smiling-male-character-in-blue-shirt-flat-illustration-isolated-on-white-happy-human-psychological-portrait-positive-emotions-user-avatar-for-app-web-design-vector.jpg'}
+              />
+              <div className="user-info">
+                <div className="user-name font-bold">{profile.first_name} {profile.last_name}</div>
+                <div className="user-handle text-secondary">@{profile.username || 'user'}</div>
+              </div>
+            </div>
+            <button className="logout-btn" onClick={handleLogout} title="Déconnexion">
+              <LogOut size={20} />
+            </button>
+          </div>
+        ) : (
+          <div className="sidebar-footer" style={{ padding: '1rem', justifyContent: 'center' }}>
+            <div className="flex items-center justify-center gap-2 text-secondary">
+              <div className="spinner" style={{ width: '16px', height: '16px', borderWidth: '2px' }}></div>
+              <span className="text-sm font-semibold">Chargement...</span>
             </div>
           </div>
-          <button className="logout-btn" onClick={handleLogout} title="Déconnexion">
-            <LogOut size={20} />
-          </button>
-        </div>
+        )
       ) : (
         <div className="sidebar-footer" style={{ padding: '1rem', justifyContent: 'center' }}>
           <button 

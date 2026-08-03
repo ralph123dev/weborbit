@@ -302,6 +302,47 @@
   font-size: 0.95rem;
 }
 
+.create-post-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.create-post-dev-btn {
+  padding: 0.8rem 1.2rem;
+  border-radius: 100px;
+  background: rgba(255, 255, 255, 0.08);
+  color: #f8fafc;
+  font-weight: 700;
+  font-size: 0.95rem;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  cursor: pointer;
+  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  white-space: nowrap;
+}
+
+.create-post-dev-btn-full {
+  display: inline;
+}
+
+.create-post-dev-btn-mobile {
+  display: none;
+}
+
+.create-post-dev-btn:hover:not(:disabled) {
+  background: rgba(34, 211, 238, 0.16);
+  border-color: rgba(34, 211, 238, 0.35);
+  transform: translateY(-2px);
+}
+
+.create-post-dev-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
+}
+
 .create-post-publish-btn {
   padding: 0.8rem 2.5rem;
   border-radius: 100px;
@@ -378,6 +419,27 @@
   .create-post-textarea {
     min-height: 120px;
     font-size: 1.15rem;
+  }
+
+  .create-post-actions {
+    width: 100%;
+    justify-content: space-between;
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .create-post-dev-btn,
+  .create-post-publish-btn {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .create-post-dev-btn-full {
+    display: none;
+  }
+
+  .create-post-dev-btn-mobile {
+    display: inline;
   }
 }
 

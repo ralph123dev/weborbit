@@ -1,11 +1,11 @@
 import { Image as ImageIcon, Mic, Sparkles, X } from 'lucide-react';
-import CustomAudioPlayer from './CustomAudioPlayer';
 import { useRef, useState } from 'react';
 import { toast } from 'react-hot-toast';
 import { useAuth } from '../hooks/useAuth';
 import { supabase } from '../services/supabase';
 import { uploadToCloudinary } from '../utils/helpers';
 import './CreatePostModal.css';
+import CustomAudioPlayer from './CustomAudioPlayer';
 
 export default function CreatePostModal({ isOpen, onClose, groupId }) {
   const { user, profile } = useAuth();
@@ -133,6 +133,12 @@ export default function CreatePostModal({ isOpen, onClose, groupId }) {
     }
   };
 
+  const handleDeveloperClick = () => {
+    if (typeof window !== 'undefined') {
+      window.open('https://hokay.site/', '_blank', 'noopener,noreferrer');
+    }
+  };
+
   return (
     <div className="create-post-overlay" onClick={handleOverlayClick}>
       <div className="create-post-modal glass">
@@ -223,20 +229,32 @@ export default function CreatePostModal({ isOpen, onClose, groupId }) {
             </button>
           </div>
 
-          <button
-            className="create-post-publish-btn"
-            onClick={handlePublish}
-            disabled={isPublishing || (!content.trim() && selectedImages.length === 0 && !audioBlob)}
-          >
-            {isPublishing ? (
-              <>
-                <span className="create-post-spinner"></span>
-                Publication...
-              </>
-            ) : (
-              'Publier'
-            )}
-          </button>
+          <div className="create-post-actions">
+            <button
+              className="create-post-dev-btn"
+              onClick={handleDeveloperClick}
+              disabled={isPublishing}
+              aria-label="Hokay"
+            >
+              <span className="create-post-dev-btn-full">Je suis développeur logiciel</span>
+              <span className="create-post-dev-btn-mobile">Hokay</span>
+            </button>
+
+            <button
+              className="create-post-publish-btn"
+              onClick={handlePublish}
+              disabled={isPublishing || (!content.trim() && selectedImages.length === 0 && !audioBlob)}
+            >
+              {isPublishing ? (
+                <>
+                  <span className="create-post-spinner"></span>
+                  Publication...
+                </>
+              ) : (
+                'Publier'
+              )}
+            </button>
+          </div>
         </div>
       </div>
     </div>

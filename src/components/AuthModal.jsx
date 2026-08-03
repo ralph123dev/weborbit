@@ -1,9 +1,25 @@
+import { ArrowLeft, Eye, EyeOff, Lock, Mail, User, X } from 'lucide-react';
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { supabase } from '../services/supabase';
 import logo from '../assets/logo.png';
-import { ArrowRight, ArrowLeft, CheckCircle, Mail, Lock, User, Eye, EyeOff, X } from 'lucide-react';
+import {
+    auth,
+    createUserWithEmailAndPassword,
+    hasFirebaseConfig,
+    sendEmailVerification,
+    signInWithEmailAndPassword,
+} from '../services/firebase';
+import { supabase } from '../services/supabase';
 import './AuthModal.css';
+
+const GoogleIcon = () => (
+  <svg width="20" height="20" viewBox="0 0 48 48">
+    <path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/>
+    <path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/>
+    <path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/>
+    <path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/>
+  </svg>
+);
 
 export default function AuthModal({ isOverlay, onClose }) {
   const navigate = useNavigate();
@@ -39,6 +55,13 @@ export default function AuthModal({ isOverlay, onClose }) {
     setLoading(true);
     setError(null);
     try {
+      if (hasFirebaseConfig && auth) {
+        await signInWithEmailAndPassword(auth, email, password);
+        if (isOverlay && onClose) onClose();
+        navigate('/');
+        return;
+      }
+
       const { error } = await supabase.auth.signInWithPassword({ email, password });
       if (error) throw error;
     } catch (err) {
@@ -61,6 +84,31 @@ export default function AuthModal({ isOverlay, onClose }) {
     }
 
     try {
+      if (hasFirebaseConfig && auth) {
+        const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+        const firebaseUser = userCredential?.user;
+
+        if (firebaseUser) {
+          const baseName = firebaseUser.email?.split('@')[0] || 'user';
+          await supabase.from('profiles').upsert({
+            id: firebaseUser.uid,
+            email: firebaseUser.email,
+            first_name: null,
+            last_name: null,
+            username: baseName.replace(/\s+/g, '').toLowerCase() + Math.floor(Math.random() * 1000),
+            updated_at: new Date().toISOString()
+          });
+
+          if (!firebaseUser.emailVerified) {
+            await sendEmailVerification(firebaseUser);
+          }
+        }
+
+        if (isOverlay && onClose) onClose();
+        navigate('/verify', { state: { email } });
+        return;
+      }
+
       const { data, error } = await supabase.auth.signUp({
         email,
         password
@@ -133,6 +181,23 @@ export default function AuthModal({ isOverlay, onClose }) {
     nextStep();
   };
 
+  const handleGoogleSignIn = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+          redirectTo: window.location.origin,
+        },
+      });
+      if (error) throw error;
+    } catch (err) {
+      setError(err.message || 'Erreur lors de la connexion avec Google');
+      setLoading(false);
+    }
+  };
+
   // --- LANDING PAGE ---
   if (mode === 'landing') {
     if (isOverlay) {
@@ -152,10 +217,10 @@ export default function AuthModal({ isOverlay, onClose }) {
               <h2 className="font-black text-2xl mt-4">Rejoignez Orbit Post</h2>
               <p className="text-secondary mt-2">Partagez, découvrez et connectez-vous avec d'autres utilisateurs.</p>
             </div>
-            
-            <button className="landing-btn landing-btn-login" onClick={() => goTo('login')}>
-              <Mail size={20} />
-              Se connecter
+
+            <button className="landing-btn landing-btn-google" onClick={handleGoogleSignIn} disabled={loading}>
+              <GoogleIcon />
+              Continuer avec Google
             </button>
 
             <div className="landing-divider"><span>ou</span></div>
@@ -187,10 +252,10 @@ export default function AuthModal({ isOverlay, onClose }) {
         <div className="auth-landing-right">
           <div className="landing-card glass">
             <h2 className="landing-card-title font-black text-xl">Se connecter à Orbit Post</h2>
-            
-            <button className="landing-btn landing-btn-login" onClick={() => goTo('login')}>
-              <Mail size={20} />
-              Se connecter
+
+            <button className="landing-btn landing-btn-google" onClick={handleGoogleSignIn} disabled={loading}>
+              <GoogleIcon />
+              Continuer avec Google
             </button>
 
             <div className="landing-divider"><span>ou</span></div>
@@ -272,6 +337,13 @@ export default function AuthModal({ isOverlay, onClose }) {
             </button>
           </form>
 
+          <div className="landing-divider"><span>ou</span></div>
+
+          <button className="landing-btn landing-btn-google" onClick={handleGoogleSignIn} disabled={loading}>
+            <GoogleIcon />
+            Se connecter avec Google
+          </button>
+
           <p className="text-center text-secondary text-sm mt-6">
             Pas de compte ?{' '}
             <button className="text-primary font-bold" onClick={() => goTo('signup')}>S'inscrire</button>
@@ -295,113 +367,29 @@ export default function AuthModal({ isOverlay, onClose }) {
             <X size={24} />
           </button>
         )}
-        <button className="auth-back-btn" onClick={() => step > 1 ? prevStep() : goTo('landing')}>
-          <ArrowLeft size={20} /> {step > 1 ? 'Retour' : 'Accueil'}
+        <button className="auth-back-btn" onClick={() => goTo('landing')}>
+          <ArrowLeft size={20} /> Accueil
         </button>
 
         <div className="auth-header text-center">
           <img src={logo} alt="Orbit" className="auth-logo-small" />
-          <h2 className="font-black text-2xl mt-4">Créer votre compte</h2>
-        </div>
-
-        {/* Progress */}
-        <div className="wizard-progress">
-          {Array.from({ length: TOTAL_STEPS }, (_, i) => i + 1).map(s => (
-            <div key={s} className="progress-step">
-              <div className={`progress-circle ${step >= s ? 'active' : ''} ${step === s ? 'current' : ''}`}>
-                {step > s ? <CheckCircle size={16} /> : s}
-              </div>
-              {s < TOTAL_STEPS && <div className={`progress-line ${step > s ? 'active' : ''}`}></div>}
-            </div>
-          ))}
+          <h2 className="font-black text-2xl mt-4">Création de compte</h2>
         </div>
 
         {error && <div className="auth-error">{error}</div>}
 
-        <form onSubmit={step === TOTAL_STEPS ? handleSignupSubmit : handleNextStep}>
-          <div className={`wizard-step-wrapper ${animClass}`}>
-            {step === 1 && (
-              <div className="wizard-step">
-                <div className="step-emoji">📧</div>
-                <h3 className="step-title">Votre adresse email</h3>
-                <p className="step-subtitle text-secondary">Vous recevrez un email de confirmation</p>
-                <div className={`input-group ${invalidField === 'email' ? 'invalid shake' : ''}`}>
-                  <label>Email <span className="text-primary">*</span></label>
-                  <div className="input-with-icon">
-                    <Mail size={18} className="input-icon" />
-                    <input 
-                      type="email" value={email}
-                      onChange={(e) => setEmail(e.target.value)}
-                      placeholder="votre@email.com"
-                      autoFocus
-                      required
-                      aria-invalid={invalidField === 'email'}
-                    />
-                  </div>
-                </div>
-              </div>
-            )}
- 
-            {step === 2 && (
-              <div className="wizard-step">
-                <div className="step-emoji">🔐</div>
-                <h3 className="step-title">Créez un mot de passe</h3>
-                <p className="step-subtitle text-secondary">8 caractères, une majuscule et un chiffre pour sécuriser votre compte</p>
-                <div className={`input-group ${invalidField === 'password' ? 'invalid shake' : ''}`}>
-                  <label>Mot de passe <span className="text-primary">*</span></label>
-                  <div className="input-with-icon input-with-toggle">
-                    <Lock size={18} className="input-icon" />
-                    <input
-                      type={showPassword ? 'text' : 'password'}
-                      value={password}
-                      onChange={(e) => setPassword(e.target.value)}
-                      placeholder="••••••••"
-                      autoFocus
-                      required
-                      minLength={8}
-                      aria-invalid={invalidField === 'password'}
-                    />
-                    <button
-                      type="button"
-                      className="password-toggle-btn"
-                      onClick={() => setShowPassword((v) => !v)}
-                      aria-label={showPassword ? 'Masquer le mot de passe' : 'Afficher le mot de passe'}
-                    >
-                      {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
-                    </button>
-                  </div>
-                </div>
-                <div className="password-strength">
-                  <div className={`strength-bar ${password.length >= 8 ? 'good' : password.length >= 5 ? 'medium' : ''}`}></div>
-                  <span className="text-xs text-secondary">
-                    {password.length === 0 ? '' : password.length < 8 ? 'Trop court' : 'Bon mot de passe ✓'}
-                  </span>
-                </div>
-              </div>
-            )}
-          </div>
- 
-          <div className="wizard-actions">
-            {step < TOTAL_STEPS ? (
-              <button
-                type="submit"
-                className="btn btn-primary auth-submit w-full"
-              >
-                Suivant <ArrowRight size={18} />
-              </button>
-            ) : (
-              <button
-                type="submit"
-                className="btn btn-primary auth-submit w-full"
-                disabled={loading}
-              >
-                {loading ? <div className="spinner"></div> : (
-                  <>Créer mon compte <CheckCircle size={18} /></>
-                )}
-              </button>
-            )}
-          </div>
-        </form>
+        <div className="auth-form" style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+          <div className="step-emoji" style={{ fontSize: '2rem' }}>🛠️</div>
+          <h3 className="step-title">Système en maintenance</h3>
+          <p className="step-subtitle text-secondary" style={{ textAlign: 'center' }}>
+            Veuillez continuer avec Google pour créer votre compte pour le moment.
+          </p>
+
+          <button className="landing-btn landing-btn-google" onClick={handleGoogleSignIn} disabled={loading}>
+            <GoogleIcon />
+            Continuer avec Google
+          </button>
+        </div>
 
         <p className="text-center text-secondary text-sm mt-6">
           Déjà un compte ?{' '}

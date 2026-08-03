@@ -23,6 +23,7 @@ import EmailVerificationPopup from './components/EmailVerificationPopup';
 import Layout from './components/Layout';
 import MaintenanceModal from './components/MaintenanceModal';
 import ProfileSetupModal from './components/ProfileSetupModal';
+import InterestsModal from './components/InterestsModal';
 import { supabase } from './services/supabase';
 
 const MAINTENANCE_ACTIVE =
@@ -35,12 +36,25 @@ function App() {
   
   const [showProfileSetup, setShowProfileSetup] = useState(false);
   const [showEmailVerification, setShowEmailVerification] = useState(false);
+  const [showInterestsSetup, setShowInterestsSetup] = useState(false);
 
   useEffect(() => {
     if (user && profile) {
       if (profile.is_verified) {
-        if (!profile.first_name || (!profile.avatar_url && !localStorage.getItem('avatarSetupSkipped'))) {
-          setShowProfileSetup(true);
+        const isSetupCompleted = localStorage.getItem('profileSetupCompleted') === 'true';
+        
+        if (!isSetupCompleted) {
+          // Show profile setup if essential fields are missing
+          const needsFirstName = !profile.first_name;
+          const needsAvatar = !profile.avatar_url;
+          
+          if (needsFirstName || needsAvatar) {
+            setShowProfileSetup(true);
+          } else {
+            setShowProfileSetup(false);
+            // Si les champs existent déjà, on marque comme complété
+            localStorage.setItem('profileSetupCompleted', 'true');
+          }
         } else {
           setShowProfileSetup(false);
         }
@@ -59,6 +73,20 @@ function App() {
     }
   }, [user, profile]);
 
+  // Show interests setup
+  useEffect(() => {
+    if (user && profile) {
+      const isInterestsCompleted = localStorage.getItem('interestsSetupCompleted') === 'true';
+      if (!isInterestsCompleted) {
+        setShowInterestsSetup(true);
+      } else {
+        setShowInterestsSetup(false);
+      }
+    } else {
+      setShowInterestsSetup(false);
+    }
+  }, [user, profile]);
+
   const [showAuthModal, setShowAuthModal] = useState(false);
 
   useEffect(() => {
@@ -68,7 +96,7 @@ function App() {
   }, []);
 
   const handleSkipSetup = () => {
-    localStorage.setItem('avatarSetupSkipped', 'true');
+    localStorage.setItem('profileSetupCompleted', 'true');
     setShowProfileSetup(false);
   };
 
@@ -178,6 +206,12 @@ function App() {
           profile={profile}
           onVerified={handleEmailVerified}
         />
+      )}
+      {showInterestsSetup && !showProfileSetup && !showEmailVerification && (
+        <InterestsModal onClose={() => {
+          localStorage.setItem('interestsSetupCompleted', 'true');
+          setShowInterestsSetup(false);
+        }} />
       )}
       {showAuthModal && (
         <AuthModal isOverlay={true} onClose={() => setShowAuthModal(false)} />

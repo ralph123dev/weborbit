@@ -12,8 +12,12 @@ import {
   Sun,
   UserCircle,
   UserMinus,
-  Video
+  Video,
+  UserPlus,
+  Check,
+  X
 } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import { useState } from 'react';
 import { useAuth } from '../hooks/useAuth';
 import { useTheme } from '../hooks/useTheme';
@@ -24,6 +28,7 @@ import './SettingsPage.css';
 export default function SettingsPage() {
   const { isDarkMode, toggleTheme } = useTheme();
   const { user, profile, setProfile } = useAuth();
+  const navigate = useNavigate();
   
   const [isCountryFilterEnabled, setIsCountryFilterEnabled] = useState(false);
   const [deleting, setDeleting] = useState(false);
@@ -43,6 +48,10 @@ export default function SettingsPage() {
   const [showNotifications, setShowNotifications] = useState(false);
   const [notifications, setNotifications] = useState([]);
   const [loadingNotif, setLoadingNotif] = useState(false);
+
+  const [showInvitations, setShowInvitations] = useState(false);
+  const [invitations, setInvitations] = useState([]);
+  const [loadingInv, setLoadingInv] = useState(false);
 
   const handleLogout = async () => {
     if (window.confirm('Voulez-vous vraiment vous déconnecter ?')) {
@@ -134,6 +143,65 @@ export default function SettingsPage() {
       console.error(err);
     } finally {
       setLoadingNotif(false);
+    }
+  };
+
+  const fetchSettingsInvitations = async () => {
+    setLoadingInv(true);
+    try {
+      const { data: received, error } = await supabase
+        .from('invitations')
+        .select('*, sender:profiles!invitations_sender_id_fkey(*)')
+        .eq('receiver_id', user.id)
+        .eq('status', 'pending')
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+      setInvitations(received || []);
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setLoadingInv(false);
+    }
+  };
+
+  const handleAcceptInv = async (inv) => {
+    try {
+      const { error } = await supabase
+        .from('invitations')
+        .update({ status: 'accepted' })
+        .eq('id', inv.id);
+
+      if (error) throw error;
+
+      await supabase.from('notifications').insert({
+        user_id: inv.sender.id,
+        sender_id: user.id,
+        type: 'invitation_accepted',
+        content: "a accepté votre invitation"
+      });
+
+      setInvitations(prev => prev.filter(i => i.id !== inv.id));
+      
+      // Redirect to messenger
+      navigate(`/messenger?userId=${inv.sender.id}`);
+    } catch (err) {
+      console.error(err);
+      alert("Impossible d'accepter l'invitation");
+    }
+  };
+
+  const handleRejectInv = async (invId) => {
+    try {
+      const { error } = await supabase
+        .from('invitations')
+        .delete()
+        .eq('id', invId);
+
+      if (error) throw error;
+      setInvitations(prev => prev.filter(i => i.id !== invId));
+    } catch (err) {
+      console.error(err);
     }
   };
 
@@ -292,10 +360,76 @@ export default function SettingsPage() {
               ) : (
                 notifications.map(n => (
                   <div key={n.id} className="notif-item">
-                    <span className="notif-text">📝 Post: "{(n.content || '').slice(0, 50)}..."</span>
+                     <span className="notif-text">📝 Post: "{(n.content || '').slice(0, 50)}..."</span>
                     <span className="notif-time">{new Date(n.created_at).toLocaleDateString()}</span>
                   </div>
                 ))
+              )}
+            </div>
+          )}
+          <div className="settings-divider" />
+
+          {/* Invitations */}
+          <SettingsItem 
+            icon={UserPlus} iconColor="#6A5AFF"
+            label="Invitations"
+            subLabel="Gérer vos invitations reçues"
+            action={() => {
+              setShowInvitations(!showInvitations);
+              if (!showInvitations) fetchSettingsInvitations();
+            }}
+            rightElement={
+              <div className="flex items-center gap-2">
+                {invitations.length > 0 && (
+                  <span className="badge" style={{ background: '#ef4444', color: 'white', borderRadius: '50%', padding: '2px 6px', fontSize: '12px' }}>
+                    {invitations.length}
+                  </span>
+                )}
+                <ChevronRight size={20} className="text-secondary" />
+              </div>
+            }
+          />
+
+          {showInvitations && (
+            <div className="notifications-panel" style={{ padding: '1rem', background: 'var(--surface-hover)' }}>
+              {loadingInv ? (
+                <div className="notif-loading">Chargement...</div>
+              ) : invitations.length === 0 ? (
+                <div className="notif-empty" style={{ textAlign: 'center', padding: '1rem', color: 'var(--text-secondary)' }}>Aucune invitation reçue</div>
+              ) : (
+                <div className="flex flex-col gap-3">
+                  {invitations.map(inv => (
+                    <div key={inv.id} className="flex items-center justify-between glass p-3 rounded-xl">
+                      <div className="flex items-center gap-3">
+                        <img 
+                          src={inv.sender?.avatar_url || 'https://static.vecteezy.com/system/resources/thumbnails/004/607/791/small_2x/man-face-emotive-icon-smiling-male-character-in-blue-shirt-flat-illustration-isolated-on-white-happy-human-psychological-portrait-positive-emotions-user-avatar-for-app-web-design-vector.jpg'} 
+                          alt="Avatar" 
+                          className="w-10 h-10 rounded-full object-cover"
+                        />
+                        <div>
+                          <div className="font-bold">{inv.sender?.first_name} {inv.sender?.last_name}</div>
+                          <div className="text-xs text-secondary">@{inv.sender?.username}</div>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <button 
+                          className="btn btn-primary" style={{ padding: '6px', borderRadius: '50%' }}
+                          onClick={() => handleAcceptInv(inv)}
+                          title="Accepter et discuter"
+                        >
+                          <Check size={16} />
+                        </button>
+                        <button 
+                          className="btn btn-secondary" style={{ padding: '6px', borderRadius: '50%' }}
+                          onClick={() => handleRejectInv(inv.id)}
+                          title="Refuser"
+                        >
+                          <X size={16} />
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
               )}
             </div>
           )}

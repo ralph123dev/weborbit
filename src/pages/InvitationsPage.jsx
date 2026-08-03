@@ -1,4 +1,4 @@
-import { ArrowLeft, Check, UserX, X } from 'lucide-react';
+import { ArrowLeft, Check, UserX, X, MessageSquare } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { toast } from 'react-hot-toast';
 import { useNavigate } from 'react-router-dom';
@@ -216,12 +216,18 @@ export default function InvitationsPage() {
                     </span>
                     <span className="invitation-username text-secondary text-xs">@{inv.receiver?.username}</span>
                   </div>
-                  <div className="invitation-actions">
+                  <div className="invitation-actions flex flex-col gap-2">
                     <button 
-                      className="btn btn-secondary btn-sm" 
+                      className="btn btn-secondary btn-sm w-full" 
                       onClick={() => handleCancel(inv.id)}
                     >
                       Annuler
+                    </button>
+                    <button 
+                      className="btn btn-primary btn-sm w-full flex items-center justify-center gap-1" 
+                      onClick={() => navigate(`/messenger?userId=${inv.receiver?.id}`)}
+                    >
+                      <MessageSquare size={14} /> Écrire sur messenger
                     </button>
                   </div>
                 </div>

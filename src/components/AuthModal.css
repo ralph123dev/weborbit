@@ -140,6 +140,28 @@
   transform: translateY(-2px);
 }
 
+.landing-btn-google {
+  background-color: #ffffff;
+  color: #3c4043;
+  border: 1px solid #dadce0;
+  font-weight: 600;
+  margin-top: 0.5rem;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+}
+
+.landing-btn-google:hover {
+  background-color: #f8f9fa;
+  border-color: #c6c9cd;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.landing-btn-google:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
+}
+
 .landing-divider {
   display: flex;
   align-items: center;
