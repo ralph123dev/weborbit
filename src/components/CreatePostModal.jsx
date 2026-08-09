@@ -2,6 +2,8 @@ import { Image as ImageIcon, Mic, Sparkles, X } from 'lucide-react';
 import { useRef, useState } from 'react';
 import { toast } from 'react-hot-toast';
 import { useAuth } from '../hooks/useAuth';
+import { supabase } from '../services/supabase';
+import { uploadToCloudinary } from '../utils/helpers';
 import './CreatePostModal.css';
 import CustomAudioPlayer from './CustomAudioPlayer';
 
@@ -71,8 +73,51 @@ export default function CreatePostModal({ isOpen, onClose, groupId }) {
   const handlePublish = async () => {
     if ((!content.trim() && selectedImages.length === 0 && !audioBlob) || !user) return;
 
-    toast.error('Le service de publication est actuellement en maintenance.');
-    return;
+    setIsPublishing(true);
+    try {
+      const uploadedImageUrls = [];
+      for (const file of selectedImages) {
+        const url = await uploadToCloudinary(file);
+        uploadedImageUrls.push(url);
+      }
+
+      let audioUrl = null;
+      if (audioBlob) {
+        audioUrl = await uploadToCloudinary(audioBlob);
+      }
+
+      const postData = {
+        content: content.trim(),
+        user_id: user.id,
+        group_id: groupId,
+        image_urls: uploadedImageUrls,
+        image_url: uploadedImageUrls[0] || ''
+      };
+
+      if (audioUrl) {
+        postData.audio_url = audioUrl;
+      }
+
+      let { error } = await supabase.from('posts').insert(postData);
+      if (error && error.code === 'PGRST204' && audioUrl) {
+        delete postData.audio_url;
+        const retry = await supabase.from('posts').insert(postData);
+        error = retry.error;
+      }
+
+      if (error) throw error;
+
+      setContent('');
+      setSelectedImages([]);
+      setAudioBlob(null);
+      toast.success('Publication réussie !');
+      onClose();
+    } catch (err) {
+      console.error('Error publishing post:', err);
+      toast.error("Une erreur est survenue lors de la publication.");
+    } finally {
+      setIsPublishing(false);
+    }
   };
 
   const handleOverlayClick = (e) => {
