@@ -107,6 +107,54 @@ export default function Sidebar({ isOpen, onClose, onCreatePost }) {
     { path: '/invitations', icon: UserPlus, label: 'Invitations' },
   ];
 
+  const renderProfileOrLogin = (extraClass = '') => {
+    if (user) {
+      if (profile) {
+        return (
+          <div className={`sidebar-footer ${extraClass}`}>
+            <div className="user-mini-profile">
+              <img 
+                src={profile.avatar_url || 'https://static.vecteezy.com/system/resources/thumbnails/004/607/791/small_2x/man-face-emotive-icon-smiling-male-character-in-blue-shirt-flat-illustration-isolated-on-white-happy-human-psychological-portrait-positive-emotions-user-avatar-for-app-web-design-vector.jpg'} 
+                alt={profile.first_name || 'User'} 
+                className="user-avatar"
+                onError={(e) => e.target.src = 'https://static.vecteezy.com/system/resources/thumbnails/004/607/791/small_2x/man-face-emotive-icon-smiling-male-character-in-blue-shirt-flat-illustration-isolated-on-white-happy-human-psychological-portrait-positive-emotions-user-avatar-for-app-web-design-vector.jpg'}
+              />
+              <div className="user-info">
+                <div className="user-name font-bold">{profile.first_name} {profile.last_name}</div>
+                <div className="user-handle text-secondary">@{profile.username || 'user'}</div>
+              </div>
+            </div>
+            <button className="logout-btn" onClick={handleLogout} title="Déconnexion">
+              <LogOut size={20} />
+            </button>
+          </div>
+        );
+      }
+      return (
+        <div className={`sidebar-footer ${extraClass}`} style={{ padding: '1rem', justifyContent: 'center' }}>
+          <div className="flex items-center justify-center gap-2 text-secondary">
+            <div className="spinner" style={{ width: '16px', height: '16px', borderWidth: '2px' }}></div>
+            <span className="text-sm font-semibold">Chargement...</span>
+          </div>
+        </div>
+      );
+    }
+    return (
+      <div className={`sidebar-footer ${extraClass}`} style={{ padding: '1rem', justifyContent: 'center' }}>
+        <button 
+          className="btn btn-primary w-full flex items-center justify-center gap-2" 
+          onClick={() => {
+            window.dispatchEvent(new Event('open-auth-modal'));
+            if (window.innerWidth <= 768) onClose();
+          }}
+          style={{ borderRadius: 'var(--radius-full)', fontWeight: 'bold', minHeight: '44px' }}
+        >
+          Se connecter
+        </button>
+      </div>
+    );
+  };
+
   return (
     <aside className={`sidebar ${isOpen ? 'open' : ''}`}>
       <div className="sidebar-header flex items-center justify-center">
@@ -193,7 +241,7 @@ export default function Sidebar({ isOpen, onClose, onCreatePost }) {
 
         <div className="nav-divider"></div>
 
-        <button className="nav-item create-post-btn" onClick={() => { 
+        <button className="nav-item create-post-btn desktop-only" onClick={() => { 
           if (!user) {
             window.dispatchEvent(new Event('open-auth-modal'));
           } else {
@@ -205,49 +253,14 @@ export default function Sidebar({ isOpen, onClose, onCreatePost }) {
           <span className="nav-label font-bold">Créer</span>
         </button>
 
+        {renderProfileOrLogin('mobile-only')}
+
       </nav>
 
       <GroupListModal isOpen={isGroupListOpen} onClose={() => setIsGroupListOpen(false)} />
       <GroupCreateModal isOpen={isGroupModalOpen} onClose={() => setIsGroupModalOpen(false)} />
 
-      {user ? (
-        profile ? (
-          <div className="sidebar-footer">
-            <div className="user-mini-profile">
-              <img 
-                src={profile.avatar_url || 'https://static.vecteezy.com/system/resources/thumbnails/004/607/791/small_2x/man-face-emotive-icon-smiling-male-character-in-blue-shirt-flat-illustration-isolated-on-white-happy-human-psychological-portrait-positive-emotions-user-avatar-for-app-web-design-vector.jpg'} 
-                alt={profile.first_name || 'User'} 
-                className="user-avatar"
-                onError={(e) => e.target.src = 'https://static.vecteezy.com/system/resources/thumbnails/004/607/791/small_2x/man-face-emotive-icon-smiling-male-character-in-blue-shirt-flat-illustration-isolated-on-white-happy-human-psychological-portrait-positive-emotions-user-avatar-for-app-web-design-vector.jpg'}
-              />
-              <div className="user-info">
-                <div className="user-name font-bold">{profile.first_name} {profile.last_name}</div>
-                <div className="user-handle text-secondary">@{profile.username || 'user'}</div>
-              </div>
-            </div>
-            <button className="logout-btn" onClick={handleLogout} title="Déconnexion">
-              <LogOut size={20} />
-            </button>
-          </div>
-        ) : (
-          <div className="sidebar-footer" style={{ padding: '1rem', justifyContent: 'center' }}>
-            <div className="flex items-center justify-center gap-2 text-secondary">
-              <div className="spinner" style={{ width: '16px', height: '16px', borderWidth: '2px' }}></div>
-              <span className="text-sm font-semibold">Chargement...</span>
-            </div>
-          </div>
-        )
-      ) : (
-        <div className="sidebar-footer" style={{ padding: '1rem', justifyContent: 'center' }}>
-          <button 
-            className="btn btn-primary w-full flex items-center justify-center gap-2" 
-            onClick={() => window.dispatchEvent(new Event('open-auth-modal'))}
-            style={{ borderRadius: 'var(--radius-full)', fontWeight: 'bold', minHeight: '44px' }}
-          >
-            Se connecter
-          </button>
-        </div>
-      )}
+      {renderProfileOrLogin('desktop-only')}
     </aside>
   );
 }
