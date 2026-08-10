@@ -366,5 +366,8 @@
   .mobile-only {
     display: flex !important;
   }
+  .sidebar-footer.mobile-only {
+    margin-top: -0.5rem;
+  }
 }
 
