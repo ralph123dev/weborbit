@@ -89,12 +89,6 @@ export default function Sidebar({ isOpen, onClose, onCreatePost }) {
 
 
   const handleNavItemClick = (e, item) => {
-    if (item.path === '/shorts') {
-      e.preventDefault();
-      alert('Shorts en cours de maintenance');
-      return;
-    }
-
     if (!user && (item.label === 'Profil' || item.label === 'Messenger' || item.label === 'Paramètres' || item.label === 'Invitations')) {
       e.preventDefault();
       window.dispatchEvent(new Event('open-auth-modal'));
@@ -107,7 +101,6 @@ export default function Sidebar({ isOpen, onClose, onCreatePost }) {
 
   const navItems = [
     { path: '/', icon: Home, label: 'Accueil' },
-    { path: '/shorts', icon: Video, label: 'Shorts' },
     { path: '/messenger', icon: MessageCircle, label: 'Messenger' },
     { path: `/profile/${user?.id || 'undefined'}`, icon: User, label: 'Profil' },
     { path: '/settings', icon: Settings, label: 'Paramètres' },
@@ -144,44 +137,6 @@ export default function Sidebar({ isOpen, onClose, onCreatePost }) {
               </div>
               <span className="nav-label">{item.label}</span>
             </NavLink>
-            {item.path === '/shorts' && (
-              <button 
-                onClick={(e) => {
-                  e.preventDefault();
-                  e.stopPropagation();
-                  if (!user) {
-                    window.dispatchEvent(new Event('open-auth-modal'));
-                  } else {
-                    window.dispatchEvent(new Event('open-publish-short-modal'));
-                  }
-                  if (window.innerWidth <= 768) onClose();
-                }}
-                className="nav-item publish-short-nav-btn"
-                style={{ 
-                  marginLeft: '2rem', 
-                  padding: '8px 12px', 
-                  fontSize: '0.85rem', 
-                  color: '#c084fc', 
-                  background: 'rgba(168,85,247,0.08)', 
-                  border: '1px dashed rgba(168,85,247,0.3)', 
-                  borderRadius: '8px', 
-                  width: 'calc(100% - 2.5rem)', 
-                  marginTop: '2px', 
-                  marginBottom: '8px',
-                  cursor: 'pointer',
-                  fontWeight: '700',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '6px',
-                  textAlign: 'left',
-                  transition: 'background 0.2s'
-                }}
-                onMouseOver={e => e.currentTarget.style.background = 'rgba(168,85,247,0.15)'}
-                onMouseOut={e => e.currentTarget.style.background = 'rgba(168,85,247,0.08)'}
-              >
-                <PlusCircle size={16} /> Publier un Short
-              </button>
-            )}
           </div>
         ))}
 
