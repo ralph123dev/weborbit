@@ -18,12 +18,13 @@ import VerifyEmail from './pages/VerifyEmail';
 import { useEffect, useState } from 'react';
 import { Toaster, toast } from 'react-hot-toast';
 import notificationSound from './assets/tir.ogg';
+import AnnouncementPopup from './components/AnnouncementPopup';
 import AuthModal from './components/AuthModal';
 import EmailVerificationPopup from './components/EmailVerificationPopup';
+import InterestsModal from './components/InterestsModal';
 import Layout from './components/Layout';
 import MaintenanceModal from './components/MaintenanceModal';
 import ProfileSetupModal from './components/ProfileSetupModal';
-import InterestsModal from './components/InterestsModal';
 import { supabase } from './services/supabase';
 
 const MAINTENANCE_ACTIVE =
@@ -88,12 +89,46 @@ function App() {
   }, [user, profile]);
 
   const [showAuthModal, setShowAuthModal] = useState(false);
+  const [showAnnouncement, setShowAnnouncement] = useState(false);
+  const [loaderProgress, setLoaderProgress] = useState(0);
 
   useEffect(() => {
     const handleOpenAuth = () => setShowAuthModal(true);
     window.addEventListener('open-auth-modal', handleOpenAuth);
     return () => window.removeEventListener('open-auth-modal', handleOpenAuth);
   }, []);
+
+  useEffect(() => {
+    if (!user || !profile) {
+      setShowAnnouncement(false);
+      return;
+    }
+
+    setShowAnnouncement(true);
+  }, [user, profile]);
+
+  useEffect(() => {
+    if (!loading) {
+      setLoaderProgress(100);
+      return;
+    }
+
+    setLoaderProgress(0);
+    let progress = 0;
+    let timeoutId;
+
+    const tick = () => {
+      const remaining = 100 - progress;
+      progress = Math.min(98, progress + Math.max(0.4, remaining * 0.045));
+      setLoaderProgress(progress);
+      if (progress < 98) {
+        timeoutId = window.setTimeout(tick, 16);
+      }
+    };
+
+    timeoutId = window.setTimeout(tick, 16);
+    return () => window.clearTimeout(timeoutId);
+  }, [loading]);
 
   const handleSkipSetup = () => {
     localStorage.setItem('profileSetupCompleted', 'true');
@@ -178,8 +213,30 @@ function App() {
 
   if (loading) {
     return (
-      <div className="flex justify-center items-center" style={{ height: '100vh' }}>
-        <div className="skeleton" style={{ width: '40px', height: '40px', borderRadius: '50%' }}></div>
+      <div className="orbit-loader-overlay">
+        <div className="orbit-loader-stars" />
+        <div className="orbit-loader-stage">
+          <div className="orbit-system">
+            <div className="orbit-ring orbit-ring--3" />
+            <div className="orbit-ring orbit-ring--2" />
+            <div className="orbit-ring orbit-ring--1" />
+
+            <div className="orbit-orbiter orbit-orbiter--3"><div className="orbit-satellite" /></div>
+            <div className="orbit-orbiter orbit-orbiter--2"><div className="orbit-satellite orbit-satellite--violet" /></div>
+            <div className="orbit-orbiter orbit-orbiter--1"><div className="orbit-satellite orbit-satellite--white" /></div>
+
+            <div className="orbit-core" />
+          </div>
+
+          <div className="orbit-label">
+            <div className="orbit-label-title">
+              Chargement <span>{Math.round(loaderProgress)}%</span>
+            </div>
+            <div className="orbit-progress-track">
+              <div className="orbit-progress-fill" style={{ width: `${loaderProgress}%` }} />
+            </div>
+          </div>
+        </div>
       </div>
     );
   }
@@ -215,6 +272,15 @@ function App() {
       )}
       {showAuthModal && (
         <AuthModal isOverlay={true} onClose={() => setShowAuthModal(false)} />
+      )}
+      {showAnnouncement && (
+        <AnnouncementPopup
+          isOpen={showAnnouncement}
+          onClose={() => {
+            localStorage.setItem('hasSeenAnnouncement', 'true');
+            setShowAnnouncement(false);
+          }}
+        />
       )}
 
       <Routes>

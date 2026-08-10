@@ -2,11 +2,11 @@ import { Calendar, Code, Copy, Heart, Image as ImageIcon, MapPin, MessageSquare,
 import { useEffect, useRef, useState } from 'react';
 import { toast } from 'react-hot-toast';
 import { useNavigate } from 'react-router-dom';
+import CustomAudioPlayer from '../components/CustomAudioPlayer';
 import { useAuth } from '../hooks/useAuth';
 import { supabase } from '../services/supabase';
+import { buildCommentMap, canReplyTo, getCommentDepth, getEffectiveParentId, getQuotedAuthor } from '../utils/commentHelpers';
 import { formatCount, formatTextWithLinks, formatTimeAgo, uploadToCloudinary } from '../utils/helpers';
-import { buildCommentMap, getCommentDepth, getQuotedAuthor, getEffectiveParentId, canReplyTo } from '../utils/commentHelpers';
-import CustomAudioPlayer from '../components/CustomAudioPlayer';
 import './FeedPage.css';
 
 export default function FeedPage() {

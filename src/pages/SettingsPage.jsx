@@ -1,24 +1,23 @@
 import {
-  Bell,
-  ChevronRight,
-  DollarSign,
-  Globe,
-  ImageMinus,
-  Lock,
-  LogOut,
-  MapPin,
-  Moon,
-  Palette,
-  Sun,
-  UserCircle,
-  UserMinus,
-  Video,
-  UserPlus,
-  Check,
-  X
+    Bell,
+    Check,
+    ChevronRight,
+    DollarSign,
+    Globe,
+    ImageMinus,
+    Lock,
+    LogOut,
+    MapPin,
+    Palette,
+    Sun,
+    UserCircle,
+    UserMinus,
+    UserPlus,
+    Video,
+    X
 } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 import { useTheme } from '../hooks/useTheme';
 import { supabase } from '../services/supabase';
@@ -250,11 +249,11 @@ export default function SettingsPage() {
           />
           <div className="settings-divider" />
 
-          {/* Mode Sombre */}
+          {/* Mode clair / sombre */}
           <SettingsItem 
-            icon={isDarkMode ? Moon : Sun} iconColor="#6A5AFF"
-            label="Mode Sombre"
-            subLabel={isDarkMode ? 'Activé' : 'Désactivé'}
+            icon={Sun} iconColor="#FFD166"
+            label="Mode clair / sombre"
+            subLabel={isDarkMode ? 'Sombre' : 'Clair'}
             action={toggleTheme}
             rightElement={<ToggleSwitch enabled={isDarkMode} />}
           />

@@ -159,3 +159,305 @@ input, textarea {
 ::-webkit-scrollbar-thumb:hover {
   background: var(--text-secondary);
 }
+
+.announcement-popup-overlay {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.55);
+  z-index: 9999;
+  padding: 1rem;
+}
+
+.announcement-popup {
+  position: relative;
+  width: min(100%, 700px);
+  max-width: 700px;
+  background: rgba(22, 18, 40, 0.98);
+  border: 1px solid rgba(109, 92, 233, 0.25);
+  border-radius: 24px;
+  padding: 28px 28px 24px;
+  color: #ede0f0;
+  box-shadow: 0 26px 70px rgba(0, 0, 0, 0.35);
+}
+
+.announcement-popup-close {
+  position: absolute;
+  top: 18px;
+  right: 18px;
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255, 255, 255, 0.08);
+  color: #fff;
+  transition: background var(--transition-fast);
+}
+
+.announcement-popup-close:hover {
+  background: rgba(255, 255, 255, 0.16);
+}
+
+.announcement-popup-tag {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(109, 92, 233, 0.15);
+  color: #a89bf5;
+  text-transform: uppercase;
+  font-size: 11px;
+  letter-spacing: 0.5px;
+  font-weight: 700;
+  padding: 5px 11px;
+  border-radius: 999px;
+  margin-bottom: 16px;
+}
+
+.announcement-popup-header {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-bottom: 16px;
+}
+
+.announcement-popup-logo {
+  width: 48px;
+  height: 48px;
+  border-radius: 14px;
+  background: #0c0a08;
+  border: 1px solid #e07b35;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 800;
+  font-size: 18px;
+  color: #ede0cc;
+}
+
+.announcement-popup-logo span {
+  color: #e07b35;
+}
+
+.announcement-popup-title {
+  font-size: 1.2rem;
+  font-weight: 800;
+  color: #fff;
+}
+
+.announcement-popup-subtitle {
+  font-size: 0.95rem;
+  color: #afa6d2;
+}
+
+.announcement-popup-body {
+  font-size: 0.95rem;
+  line-height: 1.7;
+  color: #d8d0e8;
+  margin-bottom: 20px;
+}
+
+.announcement-popup-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, #6d5ce9, #5645c9);
+  color: #fff;
+  padding: 12px 22px;
+  border-radius: 999px;
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.orbit-loader-overlay {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: radial-gradient(ellipse at 50% 30%, rgba(15,20,32,0.9) 0%, rgba(9,11,18,1) 65%);
+  overflow: hidden;
+  z-index: 9999;
+}
+
+.orbit-loader-stars {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  background-image:
+    radial-gradient(1px 1px at 10% 20%, rgba(255,255,255,0.5), transparent),
+    radial-gradient(1px 1px at 80% 15%, rgba(255,255,255,0.35), transparent),
+    radial-gradient(1px 1px at 60% 70%, rgba(255,255,255,0.4), transparent),
+    radial-gradient(1px 1px at 25% 80%, rgba(255,255,255,0.3), transparent),
+    radial-gradient(1px 1px at 90% 60%, rgba(255,255,255,0.4), transparent),
+    radial-gradient(1px 1px at 40% 40%, rgba(255,255,255,0.25), transparent),
+    radial-gradient(1px 1px at 70% 90%, rgba(255,255,255,0.3), transparent);
+  background-repeat: no-repeat;
+  opacity: 0.7;
+}
+
+.orbit-loader-stage {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 32px;
+  padding: 24px;
+}
+
+.orbit-system {
+  position: relative;
+  width: 220px;
+  height: 220px;
+}
+
+.orbit-core {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 22px;
+  height: 22px;
+  margin: -11px 0 0 -11px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 30%, #fff, #4f8cff 45%, #8b6bff 100%);
+  box-shadow:
+    0 0 20px 4px rgba(79,140,255,0.55),
+    0 0 60px 12px rgba(139,107,255,0.25);
+  animation: orbit-pulse 2.4s ease-in-out infinite;
+}
+
+@keyframes orbit-pulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.15); }
+}
+
+.orbit-ring {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  border-radius: 50%;
+  border: 1px solid rgba(255,255,255,0.08);
+}
+
+.orbit-ring--1 { width: 96px; height: 96px; margin: -48px 0 0 -48px; }
+.orbit-ring--2 { width: 156px; height: 156px; margin: -78px 0 0 -78px; }
+.orbit-ring--3 { width: 220px; height: 220px; margin: -110px 0 0 -110px; border-style: dashed; opacity: 0.5; }
+
+.orbit-orbiter {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  animation: orbit-spin linear infinite;
+}
+
+.orbit-orbiter--1 { animation-duration: 3.2s; }
+.orbit-orbiter--2 { animation-duration: 5.5s; animation-direction: reverse; }
+.orbit-orbiter--3 { animation-duration: 8.5s; }
+
+.orbit-satellite {
+  position: absolute;
+  top: -4px;
+  left: 50%;
+  width: 8px;
+  height: 8px;
+  margin-left: -4px;
+  border-radius: 50%;
+  background: #7db3ff;
+  box-shadow: 0 0 10px 3px rgba(125,179,255,0.7), 0 0 22px 6px rgba(139,107,255,0.35);
+}
+
+.orbit-satellite--violet {
+  width: 6px;
+  height: 6px;
+  margin-left: -3px;
+  background: #8b6bff;
+  box-shadow: 0 0 8px 2px rgba(139,107,255,0.7);
+}
+
+.orbit-satellite--white {
+  width: 5px;
+  height: 5px;
+  margin-left: -2.5px;
+  background: #f4f6fb;
+  box-shadow: 0 0 6px 2px rgba(244,246,251,0.5);
+}
+
+@keyframes orbit-spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+.orbit-label {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+}
+
+.orbit-label-title {
+  font-family: 'Inter', sans-serif;
+  font-weight: 500;
+  font-size: 13px;
+  letter-spacing: 0.32em;
+  text-transform: uppercase;
+  color: #6b7385;
+}
+
+.orbit-label-title span {
+  color: #f4f6fb;
+}
+
+.orbit-progress-track {
+  position: relative;
+  width: 180px;
+  height: 2px;
+  background: rgba(255,255,255,0.08);
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.orbit-progress-fill {
+  position: absolute;
+  inset: 0;
+  width: 0%;
+  background: linear-gradient(90deg, #4f8cff, #8b6bff);
+  border-radius: 2px;
+  transition: width 0.25s ease-out;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .orbit-core, .orbit-orbiter { animation: none; }
+}
+
+@media (max-width: 640px) {
+  .orbit-loader-stage {
+    width: 100%;
+    padding: 18px;
+  }
+
+  .orbit-system {
+    width: 180px;
+    height: 180px;
+  }
+}
+
+@media (max-width: 640px) {
+  .announcement-popup {
+    width: 100%;
+    padding: 20px;
+  }
+
+  .announcement-popup-header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .announcement-popup-title {
+    font-size: 1.1rem;
+  }
+}
