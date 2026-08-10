@@ -195,6 +195,7 @@ export default function ProfilePage() {
               <div className="post-body">
                 <div 
                   className="post-text"
+                  style={{ fontFamily: post.card_style && post.card_style !== 'standard' ? post.card_style : undefined }}
                   dangerouslySetInnerHTML={{ __html: formatTextWithLinks(post.content) }}
                 />
                 

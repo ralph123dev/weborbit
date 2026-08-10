@@ -100,6 +100,7 @@ export default function PostEmbedPage() {
       <div className="embed-body" onClick={handleOpenApp}>
         <div 
           className="embed-content"
+          style={{ fontFamily: post.card_style && post.card_style !== 'standard' ? post.card_style : undefined }}
           dangerouslySetInnerHTML={{ __html: formatTextWithLinks(post.content) }}
         />
         

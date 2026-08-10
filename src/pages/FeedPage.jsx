@@ -9,6 +9,17 @@ import { buildCommentMap, canReplyTo, getCommentDepth, getEffectiveParentId, get
 import { formatCount, formatTextWithLinks, formatTimeAgo, uploadToCloudinary } from '../utils/helpers';
 import './FeedPage.css';
 
+const FONTS = [
+  { name: 'Standard (Inter)', family: 'Inter, sans-serif' },
+  { name: 'Playfair Display', family: "'Playfair Display', serif" },
+  { name: 'Fira Code', family: "'Fira Code', monospace" },
+  { name: 'Caveat', family: "'Caveat', cursive" },
+  { name: 'Lora', family: "'Lora', serif" },
+  { name: 'Montserrat', family: "'Montserrat', sans-serif" },
+  { name: 'Cinzel', family: "'Cinzel', serif" },
+  { name: 'Pacifico', family: "'Pacifico', cursive" }
+];
+
 export default function FeedPage() {
   const { user, profile } = useAuth();
   const navigate = useNavigate();
@@ -17,6 +28,9 @@ export default function FeedPage() {
   const [newPostContent, setNewPostContent] = useState('');
   const [selectedImages, setSelectedImages] = useState([]);
   const [isPublishing, setIsPublishing] = useState(false);
+  const mobileTextareaRef = useRef(null);
+  const [showMobileFontMenu, setShowMobileFontMenu] = useState(false);
+  const [selectedMobileFont, setSelectedMobileFont] = useState(FONTS[0]);
 
   // Edit/Delete Post State
   const [editingPost, setEditingPost] = useState(null);
@@ -147,6 +161,43 @@ export default function FeedPage() {
 
   const removeImage = (index) => {
     setSelectedImages(prev => prev.filter((_, i) => i !== index));
+  };
+
+  const handleMobileTextareaChange = (e) => {
+    const value = e.target.value;
+    setNewPostContent(value);
+    
+    const selectionStart = e.target.selectionStart;
+    const textBeforeCursor = value.slice(0, selectionStart);
+    
+    if (textBeforeCursor.endsWith('/p')) {
+      setShowMobileFontMenu(true);
+    } else {
+      setShowMobileFontMenu(false);
+    }
+  };
+
+  const handleSelectMobileFont = (font) => {
+    setSelectedMobileFont(font);
+    setShowMobileFontMenu(false);
+    
+    const selectionStart = mobileTextareaRef.current ? mobileTextareaRef.current.selectionStart : newPostContent.length;
+    const textBefore = newPostContent.slice(0, selectionStart);
+    const textAfter = newPostContent.slice(selectionStart);
+    
+    if (textBefore.endsWith('/p')) {
+      const newTextBefore = textBefore.slice(0, -2);
+      const newContent = newTextBefore + textAfter;
+      setNewPostContent(newContent);
+      
+      setTimeout(() => {
+        if (mobileTextareaRef.current) {
+          mobileTextareaRef.current.focus();
+          const newCursorPos = newTextBefore.length;
+          mobileTextareaRef.current.setSelectionRange(newCursorPos, newCursorPos);
+        }
+      }, 0);
+    }
   };
 
   const handlePublish = async () => {
@@ -734,6 +785,7 @@ export default function FeedPage() {
                 <div className="post-body">
                   <div 
                     className="post-text"
+                    style={{ fontFamily: post.card_style && post.card_style !== 'standard' ? post.card_style : undefined }}
                     dangerouslySetInnerHTML={{ __html: formatTextWithLinks(post.content) }}
                   />
                   
@@ -1144,6 +1196,7 @@ export default function FeedPage() {
                   <div key={post.id} className="profile-panel-post-item">
                     <div 
                       className="text-sm"
+                      style={{ fontFamily: post.card_style && post.card_style !== 'standard' ? post.card_style : undefined }}
                       dangerouslySetInnerHTML={{ __html: formatTextWithLinks(post.content?.substring(0, 150) + (post.content?.length > 150 ? '...' : '')) }}
                     />
                     {(post.image_url || (post.image_urls && post.image_urls.length > 0)) && (
@@ -1261,13 +1314,15 @@ export default function FeedPage() {
                       content: newPostContent.trim(),
                       user_id: user.id,
                       image_urls: uploadedImageUrls,
-                      image_url: uploadedImageUrls[0] || ''
+                      image_url: uploadedImageUrls[0] || '',
+                      card_style: selectedMobileFont.family
                     });
 
                     if (error) throw error;
                     toast.success('Publication réussie ! 🎉');
                     setNewPostContent('');
                     setSelectedImages([]);
+                    setSelectedMobileFont(FONTS[0]);
                     setShowMobileComposer(false);
                   } catch (e) {
                     console.error('Mobile composer error:', e);
@@ -1294,13 +1349,54 @@ export default function FeedPage() {
               </div>
             </div>
 
-            <textarea 
-              className="mobile-composer-textarea flex-1 p-4 bg-transparent border-none outline-none text-white resize-none"
-              placeholder="Quoi de neuf ?"
-              value={newPostContent}
-              onChange={e => setNewPostContent(e.target.value)}
-              autoFocus
-            />
+            <div style={{ position: 'relative', display: 'flex', flexDirection: 'column', flex: 1 }}>
+              <textarea 
+                ref={mobileTextareaRef}
+                className="mobile-composer-textarea flex-1 p-4 bg-transparent border-none outline-none text-white resize-none"
+                placeholder="Quoi de neuf ?"
+                value={newPostContent}
+                onChange={handleMobileTextareaChange}
+                autoFocus
+                style={{ fontFamily: selectedMobileFont.family }}
+              />
+
+              {showMobileFontMenu && (
+                <div className="font-selector-dropdown" style={{ bottom: '100%', top: 'auto', left: '16px', right: '16px', width: 'auto', maxWidth: 'none' }}>
+                  <div className="font-selector-header">
+                    <span>Choisir une police d'écriture</span>
+                    <button className="font-selector-close" onClick={() => setShowMobileFontMenu(false)}>
+                      <X size={14} />
+                    </button>
+                  </div>
+                  <div className="font-selector-list">
+                    {FONTS.map((font, idx) => (
+                      <button
+                        key={idx}
+                        className={`font-selector-item ${selectedMobileFont.family === font.family ? 'active' : ''}`}
+                        style={{ fontFamily: font.family }}
+                        onClick={() => handleSelectMobileFont(font)}
+                      >
+                        <span className="font-name">{font.name}</span>
+                        <span className="font-preview">Exemple de texte en {font.name}</span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {selectedMobileFont.family !== FONTS[0].family && (
+              <div className="font-indicator-badge" style={{ marginLeft: '16px', marginRight: '16px' }}>
+                <span>Police active : <strong>{selectedMobileFont.name}</strong></span>
+                <button 
+                  onClick={() => setSelectedMobileFont(FONTS[0])}
+                  className="font-indicator-clear"
+                  title="Réinitialiser la police"
+                >
+                  <X size={12} />
+                </button>
+              </div>
+            )}
 
             {selectedImages.length > 0 && (
               <div className="mobile-composer-preview-images">

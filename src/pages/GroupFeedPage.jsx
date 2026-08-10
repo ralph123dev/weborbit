@@ -980,6 +980,7 @@ export default function GroupFeedPage() {
                 <div className="post-body">
                   <div 
                     className="post-text"
+                    style={{ fontFamily: post.card_style && post.card_style !== 'standard' ? post.card_style : undefined }}
                     dangerouslySetInnerHTML={{ __html: formatTextWithLinks(post.content) }}
                   />
                   
@@ -1380,6 +1381,7 @@ export default function GroupFeedPage() {
                   <div key={post.id} className="profile-panel-post-item">
                     <div 
                       className="text-sm"
+                      style={{ fontFamily: post.card_style && post.card_style !== 'standard' ? post.card_style : undefined }}
                       dangerouslySetInnerHTML={{ __html: formatTextWithLinks(post.content?.substring(0, 150) + (post.content?.length > 150 ? '...' : '')) }}
                     />
                     {(post.image_url || (post.image_urls && post.image_urls.length > 0)) && (

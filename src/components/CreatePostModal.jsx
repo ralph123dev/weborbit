@@ -7,6 +7,17 @@ import { uploadToCloudinary } from '../utils/helpers';
 import './CreatePostModal.css';
 import CustomAudioPlayer from './CustomAudioPlayer';
 
+const FONTS = [
+  { name: 'Standard (Inter)', family: 'Inter, sans-serif' },
+  { name: 'Playfair Display', family: "'Playfair Display', serif" },
+  { name: 'Fira Code', family: "'Fira Code', monospace" },
+  { name: 'Caveat', family: "'Caveat', cursive" },
+  { name: 'Lora', family: "'Lora', serif" },
+  { name: 'Montserrat', family: "'Montserrat', sans-serif" },
+  { name: 'Cinzel', family: "'Cinzel', serif" },
+  { name: 'Pacifico', family: "'Pacifico', cursive" }
+];
+
 export default function CreatePostModal({ isOpen, onClose, groupId }) {
   const { user, profile } = useAuth();
   const [content, setContent] = useState('');
@@ -17,6 +28,9 @@ export default function CreatePostModal({ isOpen, onClose, groupId }) {
   const fileInputRef = useRef(null);
   const mediaRecorderRef = useRef(null);
   const audioChunksRef = useRef([]);
+  const textareaRef = useRef(null);
+  const [showFontMenu, setShowFontMenu] = useState(false);
+  const [selectedFont, setSelectedFont] = useState(FONTS[0]);
 
   if (!isOpen) return null;
 
@@ -70,6 +84,43 @@ export default function CreatePostModal({ isOpen, onClose, groupId }) {
     audioChunksRef.current = [];
   };
 
+  const handleTextareaChange = (e) => {
+    const value = e.target.value;
+    setContent(value);
+    
+    const selectionStart = e.target.selectionStart;
+    const textBeforeCursor = value.slice(0, selectionStart);
+    
+    if (textBeforeCursor.endsWith('/p')) {
+      setShowFontMenu(true);
+    } else {
+      setShowFontMenu(false);
+    }
+  };
+
+  const handleSelectFont = (font) => {
+    setSelectedFont(font);
+    setShowFontMenu(false);
+    
+    const selectionStart = textareaRef.current ? textareaRef.current.selectionStart : content.length;
+    const textBefore = content.slice(0, selectionStart);
+    const textAfter = content.slice(selectionStart);
+    
+    if (textBefore.endsWith('/p')) {
+      const newTextBefore = textBefore.slice(0, -2);
+      const newContent = newTextBefore + textAfter;
+      setContent(newContent);
+      
+      setTimeout(() => {
+        if (textareaRef.current) {
+          textareaRef.current.focus();
+          const newCursorPos = newTextBefore.length;
+          textareaRef.current.setSelectionRange(newCursorPos, newCursorPos);
+        }
+      }, 0);
+    }
+  };
+
   const handlePublish = async () => {
     if ((!content.trim() && selectedImages.length === 0 && !audioBlob) || !user) return;
 
@@ -91,7 +142,8 @@ export default function CreatePostModal({ isOpen, onClose, groupId }) {
         user_id: user.id,
         group_id: groupId,
         image_urls: uploadedImageUrls,
-        image_url: uploadedImageUrls[0] || ''
+        image_url: uploadedImageUrls[0] || '',
+        card_style: selectedFont.family
       };
 
       if (audioUrl) {
@@ -110,6 +162,7 @@ export default function CreatePostModal({ isOpen, onClose, groupId }) {
       setContent('');
       setSelectedImages([]);
       setAudioBlob(null);
+      setSelectedFont(FONTS[0]);
       toast.success('Publication réussie !');
       onClose();
     } catch (err) {
@@ -162,14 +215,55 @@ export default function CreatePostModal({ isOpen, onClose, groupId }) {
             </div>
           </div>
 
-          <textarea
-            className="create-post-textarea"
-            placeholder="Quoi de neuf ? Partagez vos pensées..."
-            value={content}
-            onChange={(e) => setContent(e.target.value)}
-            autoFocus
-            disabled={isPublishing}
-          />
+          <div style={{ position: 'relative' }}>
+            <textarea
+              ref={textareaRef}
+              className="create-post-textarea"
+              placeholder="Quoi de neuf ? Partagez vos pensées..."
+              value={content}
+              onChange={handleTextareaChange}
+              autoFocus
+              disabled={isPublishing}
+              style={{ fontFamily: selectedFont.family }}
+            />
+
+            {showFontMenu && (
+              <div className="font-selector-dropdown">
+                <div className="font-selector-header">
+                  <span>Choisir une police d'écriture</span>
+                  <button className="font-selector-close" onClick={() => setShowFontMenu(false)}>
+                    <X size={14} />
+                  </button>
+                </div>
+                <div className="font-selector-list">
+                  {FONTS.map((font, idx) => (
+                    <button
+                      key={idx}
+                      className={`font-selector-item ${selectedFont.family === font.family ? 'active' : ''}`}
+                      style={{ fontFamily: font.family }}
+                      onClick={() => handleSelectFont(font)}
+                    >
+                      <span className="font-name">{font.name}</span>
+                      <span className="font-preview">Exemple de texte en {font.name}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+
+          {selectedFont.family !== FONTS[0].family && (
+            <div className="font-indicator-badge">
+              <span>Police active : <strong>{selectedFont.name}</strong></span>
+              <button 
+                onClick={() => setSelectedFont(FONTS[0])}
+                className="font-indicator-clear"
+                title="Réinitialiser la police"
+              >
+                <X size={12} />
+              </button>
+            </div>
+          )}
 
           {/* Image Previews */}
           {selectedImages.length > 0 && (

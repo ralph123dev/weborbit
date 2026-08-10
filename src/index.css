@@ -1,3 +1,5 @@
+@import url('https://fonts.googleapis.com/css2?family=Caveat:wght@400;700&family=Cinzel:wght@400;700&family=Fira+Code:wght@400;700&family=Inter:wght@400;700;900&family=Lora:ital,wght@0,400;0,700;1,400&family=Montserrat:wght@400;700&family=Pacifico&family=Playfair+Display:ital,wght@0,400;0,700;1,400&display=swap');
+
 :root {
   --primary-color: #6A5AFF;
   --primary-hover: #5849EB;
@@ -461,3 +463,141 @@ input, textarea {
     font-size: 1.1rem;
   }
 }
+
+/* ========================================= */
+/* Font Selection UI                         */
+/* ========================================= */
+
+.font-selector-dropdown {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  z-index: 100;
+  width: 100%;
+  max-width: 320px;
+  background: rgba(18, 18, 26, 0.95);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 16px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(16px);
+  overflow: hidden;
+  margin-top: 0.5rem;
+  animation: fadeInSelector 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes fadeInSelector {
+  from { opacity: 0; transform: translateY(-10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.font-selector-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.75rem 1rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: var(--text-secondary);
+}
+
+.font-selector-close {
+  background: transparent;
+  border: none;
+  color: var(--text-secondary);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2px;
+  border-radius: 50%;
+  transition: all 0.2s;
+}
+
+.font-selector-close:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: white;
+}
+
+.font-selector-list {
+  max-height: 280px;
+  overflow-y: auto;
+  padding: 0.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.font-selector-item {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  padding: 0.6rem 0.8rem;
+  border-radius: 10px;
+  background: transparent;
+  border: none;
+  color: white;
+  text-align: left;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.font-selector-item:hover {
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.font-selector-item.active {
+  background: rgba(106, 90, 255, 0.2);
+  border: 1px solid rgba(106, 90, 255, 0.4);
+}
+
+.font-selector-item .font-name {
+  font-size: 0.95rem;
+  font-weight: 600;
+  margin-bottom: 2px;
+}
+
+.font-selector-item .font-preview {
+  font-size: 0.75rem;
+  opacity: 0.6;
+}
+
+.font-indicator-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  background: rgba(106, 90, 255, 0.15);
+  border: 1px solid rgba(106, 90, 255, 0.3);
+  padding: 0.4rem 0.8rem;
+  border-radius: 9999px;
+  font-size: 0.8rem;
+  color: #a5b4fc;
+  margin-top: 0.5rem;
+  margin-bottom: 0.5rem;
+  animation: badgePop 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+@keyframes badgePop {
+  from { transform: scale(0.8); opacity: 0; }
+  to { transform: scale(1); opacity: 1; }
+}
+
+.font-indicator-clear {
+  background: transparent;
+  border: none;
+  color: #a5b4fc;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2px;
+  border-radius: 50%;
+  transition: all 0.2s;
+}
+
+.font-indicator-clear:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: white;
+}
+
