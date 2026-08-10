@@ -1,5 +1,5 @@
 import { ArrowLeft, Eye, EyeOff, Lock, Mail, User, X } from 'lucide-react';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import logo from '../assets/logo.png';
 import {
@@ -37,6 +37,52 @@ export default function AuthModal({ isOverlay, onClose }) {
   const [animClass, setAnimClass] = useState('step-enter-right');
   const [invalidField, setInvalidField] = useState(null);
   const TOTAL_STEPS = 2;
+
+  useEffect(() => {
+    const initializeGoogleSignIn = () => {
+      if (window.google && import.meta.env.VITE_GOOGLE_CLIENT_ID) {
+        try {
+          window.google.accounts.id.initialize({
+            client_id: import.meta.env.VITE_GOOGLE_CLIENT_ID,
+            callback: async (response) => {
+              setLoading(true);
+              setError(null);
+              try {
+                const { error } = await supabase.auth.signInWithIdToken({
+                  provider: 'google',
+                  token: response.credential,
+                });
+                if (error) throw error;
+                if (onClose) onClose();
+              } catch (err) {
+                setError(err.message || 'Erreur lors de la connexion avec Google');
+                setLoading(false);
+              }
+            },
+          });
+
+          const placeholders = document.querySelectorAll(".google-signin-btn-placeholder");
+          placeholders.forEach(placeholder => {
+            window.google.accounts.id.renderButton(
+              placeholder,
+              { 
+                theme: "outline", 
+                size: "large", 
+                width: placeholder.offsetWidth || 300,
+                text: "continue_with",
+                shape: "pill"
+              }
+            );
+          });
+        } catch (e) {
+          console.error("Error initializing client-side Google sign-in:", e);
+        }
+      }
+    };
+
+    const timer = setTimeout(initializeGoogleSignIn, 500);
+    return () => clearTimeout(timer);
+  }, [mode, loading]);
 
   const animateStep = (direction, newStep) => {
     setAnimClass(direction === 'right' ? 'step-exit-left' : 'step-exit-right');
@@ -218,10 +264,14 @@ export default function AuthModal({ isOverlay, onClose }) {
               <p className="text-secondary mt-2">Partagez, découvrez et connectez-vous avec d'autres utilisateurs.</p>
             </div>
 
-            <button className="landing-btn landing-btn-google" onClick={handleGoogleSignIn} disabled={loading}>
-              <GoogleIcon />
-              Continuer avec Google
-            </button>
+            {import.meta.env.VITE_GOOGLE_CLIENT_ID ? (
+              <div className="google-signin-btn-placeholder"></div>
+            ) : (
+              <button className="landing-btn landing-btn-google" onClick={handleGoogleSignIn} disabled={loading}>
+                <GoogleIcon />
+                Continuer avec Google
+              </button>
+            )}
 
             <div className="landing-divider"><span>ou</span></div>
 
@@ -253,10 +303,14 @@ export default function AuthModal({ isOverlay, onClose }) {
           <div className="landing-card glass">
             <h2 className="landing-card-title font-black text-xl">Se connecter à Orbit Post</h2>
 
-            <button className="landing-btn landing-btn-google" onClick={handleGoogleSignIn} disabled={loading}>
-              <GoogleIcon />
-              Continuer avec Google
-            </button>
+            {import.meta.env.VITE_GOOGLE_CLIENT_ID ? (
+              <div className="google-signin-btn-placeholder"></div>
+            ) : (
+              <button className="landing-btn landing-btn-google" onClick={handleGoogleSignIn} disabled={loading}>
+                <GoogleIcon />
+                Continuer avec Google
+              </button>
+            )}
 
             <div className="landing-divider"><span>ou</span></div>
 
@@ -339,10 +393,14 @@ export default function AuthModal({ isOverlay, onClose }) {
 
           <div className="landing-divider"><span>ou</span></div>
 
-          <button className="landing-btn landing-btn-google" onClick={handleGoogleSignIn} disabled={loading}>
-            <GoogleIcon />
-            Se connecter avec Google
-          </button>
+          {import.meta.env.VITE_GOOGLE_CLIENT_ID ? (
+            <div className="google-signin-btn-placeholder"></div>
+          ) : (
+            <button className="landing-btn landing-btn-google" onClick={handleGoogleSignIn} disabled={loading}>
+              <GoogleIcon />
+              Se connecter avec Google
+            </button>
+          )}
 
           <p className="text-center text-secondary text-sm mt-6">
             Pas de compte ?{' '}
@@ -385,10 +443,14 @@ export default function AuthModal({ isOverlay, onClose }) {
             Veuillez continuer avec Google pour créer votre compte pour le moment.
           </p>
 
-          <button className="landing-btn landing-btn-google" onClick={handleGoogleSignIn} disabled={loading}>
-            <GoogleIcon />
-            Continuer avec Google
-          </button>
+          {import.meta.env.VITE_GOOGLE_CLIENT_ID ? (
+            <div className="google-signin-btn-placeholder"></div>
+          ) : (
+            <button className="landing-btn landing-btn-google" onClick={handleGoogleSignIn} disabled={loading}>
+              <GoogleIcon />
+              Continuer avec Google
+            </button>
+          )}
         </div>
 
         <p className="text-center text-secondary text-sm mt-6">
