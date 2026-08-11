@@ -17,6 +17,40 @@ export default function Sidebar({ isOpen, onClose, onCreatePost }) {
   const [isGroupModalOpen, setIsGroupModalOpen] = useState(false);
   const [isGroupListOpen, setIsGroupListOpen] = useState(false);
 
+  const [postsCount, setPostsCount] = useState(0);
+
+  useEffect(() => {
+    fetchPostsCount();
+
+    const channel = supabase
+      .channel('public-posts-count-sidebar')
+      .on('postgres_changes', {
+        event: '*',
+        schema: 'public',
+        table: 'posts'
+      }, () => {
+        fetchPostsCount();
+      })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, []);
+
+  const fetchPostsCount = async () => {
+    try {
+      const { count, error } = await supabase
+        .from('posts')
+        .select('*', { count: 'exact', head: true });
+      if (!error) {
+        setPostsCount(count || 0);
+      }
+    } catch (e) {
+      console.error('Error fetching posts count:', e);
+    }
+  };
+
   useEffect(() => {
     if (!user) return;
 
@@ -177,13 +211,18 @@ export default function Sidebar({ isOpen, onClose, onCreatePost }) {
               className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}
               onClick={(e) => handleNavItemClick(e, item)}
             >
-              <div className="nav-item-wrapper">
+              <div className="nav-item-wrapper" style={{ width: '100%', display: 'flex', alignItems: 'center' }}>
                 <item.icon className="nav-icon" size={24} />
                 {item.label === 'Messenger' && unreadCount > 0 && (
                   <span className="sidebar-dot-badge"></span>
                 )}
+                <span className="nav-label" style={{ marginLeft: '1rem' }}>{item.label}</span>
+                {item.label === 'Accueil' && postsCount > 0 && (
+                  <span className="sidebar-badge" style={{ marginLeft: 'auto', backgroundColor: '#ef4444', color: 'white', padding: '2px 8px', borderRadius: '10px', fontSize: '0.8rem', fontWeight: 'bold' }}>
+                    {postsCount}
+                  </span>
+                )}
               </div>
-              <span className="nav-label">{item.label}</span>
             </NavLink>
           </div>
         ))}

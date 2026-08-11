@@ -1,0 +1,139 @@
+.carousel-stage {
+  width: 100%;
+  margin-top: 0.75rem;
+}
+
+.carousel-stage-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  margin-bottom: 0.5rem;
+  padding: 0 0.25rem;
+}
+
+.carousel-eyebrow {
+  font-size: 0.72rem;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--text-secondary);
+}
+
+.carousel-count {
+  font-size: 0.9rem;
+  color: var(--primary-color, #e8a33d);
+  font-variant-numeric: tabular-nums;
+  font-weight: bold;
+}
+
+.carousel-frame {
+  position: relative;
+  border-radius: 14px;
+  overflow: hidden;
+  background: var(--surface-hover);
+  border: 1px solid var(--border-color);
+}
+
+.carousel-inner-container {
+  position: relative;
+}
+
+.carousel-img-wrapper {
+  height: 380px;
+  min-height: 250px;
+  max-height: 480px;
+  cursor: pointer;
+  position: relative;
+}
+
+.carousel-img-wrapper img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform 0.3s ease;
+}
+
+.carousel-img-wrapper:hover img {
+  transform: scale(1.02);
+}
+
+/* overlay bottom */
+.carousel-caption-overlay {
+  content: "";
+  position: absolute;
+  left: 0; right: 0; bottom: 0;
+  height: 35%;
+  background: linear-gradient(to top, rgba(0,0,0,0.5), rgba(0,0,0,0));
+  pointer-events: none;
+}
+
+/* custom navigation arrows */
+.carousel-nav-btn {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(4px);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 4;
+  cursor: pointer;
+  color: white;
+  transition: background-color 0.2s ease, transform 0.2s ease;
+}
+
+.carousel-nav-btn:hover {
+  background: var(--primary-color, #6366f1);
+  color: white;
+  transform: translateY(-50%) scale(1.05);
+}
+
+.carousel-nav-prev { left: 0.75rem; }
+.carousel-nav-next { right: 0.75rem; }
+
+/* segmented progress track */
+.carousel-progress-track {
+  display: flex;
+  gap: 4px;
+  margin-top: 0.5rem;
+  padding: 0 0.25rem;
+}
+
+.carousel-segment {
+  flex: 1;
+  height: 3px;
+  background: rgba(255, 255, 255, 0.15);
+  border-radius: 2px;
+  overflow: hidden;
+  cursor: pointer;
+}
+
+.carousel-fill {
+  height: 100%;
+  width: 0%;
+  background: var(--primary-color, #6366f1);
+  border-radius: 2px;
+  transition: width 0.3s ease;
+}
+
+.carousel-segment.active .carousel-fill {
+  width: 100%;
+}
+
+.carousel-segment.done .carousel-fill {
+  width: 100%;
+}
+
+@media (max-width: 576px) {
+  .carousel-img-wrapper {
+    height: 280px;
+  }
+  .carousel-nav-btn {
+    width: 32px;
+    height: 32px;
+  }
+}

@@ -5,6 +5,8 @@ import logo from '../assets/logo.png';
 import { supabase } from '../services/supabase';
 import { formatTextWithLinks, formatTimeAgo } from '../utils/helpers';
 import CustomAudioPlayer from '../components/CustomAudioPlayer';
+import ImageCarousel from '../components/ImageCarousel';
+import UserBadge from '../components/UserBadge';
 import './PostEmbedPage.css';
 
 export default function PostEmbedPage() {
@@ -12,6 +14,7 @@ export default function PostEmbedPage() {
   const [post, setPost] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [originalTextPopup, setOriginalTextPopup] = useState(null);
 
   useEffect(() => {
     fetchPost();
@@ -84,9 +87,9 @@ export default function PostEmbedPage() {
             onError={(e) => e.target.src = 'https://static.vecteezy.com/system/resources/thumbnails/004/607/791/small_2x/man-face-emotive-icon-smiling-male-character-in-blue-shirt-flat-illustration-isolated-on-white-happy-human-psychological-portrait-positive-emotions-user-avatar-for-app-web-design-vector.jpg'}
           />
           <div className="embed-author-meta">
-            <span className="embed-author-name font-bold">
+            <span className="embed-author-name font-bold" style={{ display: 'inline-flex', alignItems: 'center' }}>
               {post.profiles?.first_name} {post.profiles?.last_name}
-              {post.profiles?.is_verified && <span className="text-primary ml-1">✓</span>}
+              <UserBadge username={post.profiles?.username} />
             </span>
             <span className="embed-username text-secondary text-xs">@{post.profiles?.username}</span>
           </div>
@@ -103,16 +106,23 @@ export default function PostEmbedPage() {
           style={{ fontFamily: post.card_style && post.card_style !== 'standard' ? post.card_style : undefined }}
           dangerouslySetInnerHTML={{ __html: formatTextWithLinks(post.content) }}
         />
+
+        {post.original_content && (
+          <button
+            className="view-original-lang-btn"
+            style={{ marginTop: '4px', position: 'relative', zIndex: 10 }}
+            onClick={(e) => {
+              e.stopPropagation();
+              setOriginalTextPopup({ content: post.original_content, lang: post.translation_lang });
+            }}
+          >
+            Voir langue d'origine
+          </button>
+        )}
         
         {/* Images */}
         {post.image_urls && post.image_urls.length > 0 ? (
-          <div className={`embed-images-grid grid-${Math.min(post.image_urls.length, 3)}`}>
-            {post.image_urls.map((imgUrl, index) => (
-              <div key={index} className="embed-image-wrapper">
-                <img src={imgUrl} alt={`Post attachment ${index + 1}`} className="embed-img" />
-              </div>
-            ))}
-          </div>
+          <ImageCarousel images={post.image_urls} />
         ) : post.image_url ? (
           <div className="embed-image-wrapper mt-3">
             <img src={post.image_url} alt="Post attachment" className="embed-img single-img" />
@@ -149,6 +159,24 @@ export default function PostEmbedPage() {
           <ExternalLink size={12} />
         </button>
       </div>
+
+      {/* Original Text Popup */}
+      {originalTextPopup && (
+        <div className="modal-overlay" onClick={() => setOriginalTextPopup(null)} style={{ position: 'fixed', zIndex: 99999 }}>
+          <div className="original-text-popup glass" onClick={(e) => e.stopPropagation()}>
+            <div className="original-text-popup-header">
+              <h3 className="font-bold text-lg">🌐 Langue d'origine</h3>
+              <button className="icon-btn" onClick={() => setOriginalTextPopup(null)}><X size={20} /></button>
+            </div>
+            <div className="original-text-popup-body">
+              <p className="original-text-content">{originalTextPopup.content}</p>
+            </div>
+            <div className="original-text-popup-footer">
+              <button className="btn btn-primary" onClick={() => setOriginalTextPopup(null)}>Fermer</button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

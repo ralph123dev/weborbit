@@ -8,6 +8,8 @@ import { formatCount, formatTextWithLinks, formatTimeAgo, uploadToCloudinary } f
 import { buildCommentMap, getCommentDepth, getQuotedAuthor, getEffectiveParentId, canReplyTo } from '../utils/commentHelpers';
 import CustomAudioPlayer from '../components/CustomAudioPlayer';
 import CreatePostModal from '../components/CreatePostModal';
+import ImageCarousel from '../components/ImageCarousel';
+import UserBadge from '../components/UserBadge';
 import './GroupFeedPage.css';
 
 export default function GroupFeedPage() {
@@ -65,6 +67,7 @@ export default function GroupFeedPage() {
   const [profilePanelLoading, setProfilePanelLoading] = useState(false);
   const [invitation, setInvitation] = useState(null);
   const [showMobileComposer, setShowMobileComposer] = useState(false);
+  const [originalTextPopup, setOriginalTextPopup] = useState(null);
 
   // Lightbox Gallery state
   const [lightboxOpen, setLightboxOpen] = useState(false);
@@ -927,9 +930,7 @@ export default function GroupFeedPage() {
                       {post.user_id === group?.created_by && (
                         <span className="text-xs font-bold" style={{ background: 'linear-gradient(135deg, var(--primary-color), #8b5cf6)', color: 'white', padding: '0.1rem 0.4rem', borderRadius: '4px' }}>Admin</span>
                       )}
-                      {post.profiles?.is_verified && (
-                        <span className="text-primary" title="Vérifié">✓</span>
-                      )}
+                      <UserBadge username={post.profiles?.username} />
                     </div>
                     <div className="post-time text-secondary text-sm">
                       <span className="username-handle" onClick={() => handleAdminActionClick(post.profiles)}>
@@ -983,20 +984,18 @@ export default function GroupFeedPage() {
                     style={{ fontFamily: post.card_style && post.card_style !== 'standard' ? post.card_style : undefined }}
                     dangerouslySetInnerHTML={{ __html: formatTextWithLinks(post.content) }}
                   />
+
+                  {post.original_content && (
+                    <button
+                      className="view-original-lang-btn"
+                      onClick={() => setOriginalTextPopup({ content: post.original_content, lang: post.translation_lang })}
+                    >
+                      Voir langue d'origine
+                    </button>
+                  )}
                   
                   {post.image_urls && post.image_urls.length > 0 ? (
-                    <div className="post-images">
-                      {post.image_urls.map((img, idx) => (
-                        <img 
-                          key={idx} 
-                          src={img} 
-                          alt="Post" 
-                          className="post-image cursor-pointer hover:opacity-80 transition-opacity" 
-                          loading="lazy" 
-                          onClick={() => handleOpenGallery(post.image_urls, idx)}
-                        />
-                      ))}
-                    </div>
+                    <ImageCarousel images={post.image_urls} onImageClick={handleOpenGallery} />
                   ) : post.image_url ? (
                     <div className="post-images">
                        <img 
@@ -1608,6 +1607,24 @@ export default function GroupFeedPage() {
       )}
 
       </div>
+
+      {/* Original Text Popup */}
+      {originalTextPopup && (
+        <div className="modal-overlay" onClick={() => setOriginalTextPopup(null)} style={{ zIndex: 14000 }}>
+          <div className="original-text-popup glass" onClick={(e) => e.stopPropagation()}>
+            <div className="original-text-popup-header">
+              <h3 className="font-bold text-lg">🌐 Langue d'origine</h3>
+              <button className="icon-btn" onClick={() => setOriginalTextPopup(null)}><X size={20} /></button>
+            </div>
+            <div className="original-text-popup-body">
+              <p className="original-text-content">{originalTextPopup.content}</p>
+            </div>
+            <div className="original-text-popup-footer">
+              <button className="btn btn-primary" onClick={() => setOriginalTextPopup(null)}>Fermer</button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

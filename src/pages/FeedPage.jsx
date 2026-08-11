@@ -3,6 +3,8 @@ import { useEffect, useRef, useState } from 'react';
 import { toast } from 'react-hot-toast';
 import { useNavigate } from 'react-router-dom';
 import CustomAudioPlayer from '../components/CustomAudioPlayer';
+import ImageCarousel from '../components/ImageCarousel';
+import UserBadge from '../components/UserBadge';
 import { useAuth } from '../hooks/useAuth';
 import { supabase } from '../services/supabase';
 import { buildCommentMap, canReplyTo, getCommentDepth, getEffectiveParentId, getQuotedAuthor } from '../utils/commentHelpers';
@@ -60,6 +62,7 @@ export default function FeedPage() {
   // User Profile Panel state
   const [profilePanel, setProfilePanel] = useState(null);
   const [profilePanelPosts, setProfilePanelPosts] = useState([]);
+  const [originalTextPopup, setOriginalTextPopup] = useState(null);
   const [profilePanelLoading, setProfilePanelLoading] = useState(false);
   const [invitation, setInvitation] = useState(null);
   const [showMobileComposer, setShowMobileComposer] = useState(false);
@@ -719,9 +722,7 @@ export default function FeedPage() {
                       >
                         {post.profiles?.first_name} {post.profiles?.last_name}
                       </span>
-                      {post.profiles?.is_verified && (
-                        <span className="text-primary" title="Vérifié">✓</span>
-                      )}
+                      <UserBadge username={post.profiles?.username} />
                     </div>
                     <div className="post-time text-secondary text-sm">
                       <span className="username-handle" onClick={() => handleOpenProfile(post.profiles)}>
@@ -788,20 +789,18 @@ export default function FeedPage() {
                     style={{ fontFamily: post.card_style && post.card_style !== 'standard' ? post.card_style : undefined }}
                     dangerouslySetInnerHTML={{ __html: formatTextWithLinks(post.content) }}
                   />
+
+                  {post.original_content && (
+                    <button
+                      className="view-original-lang-btn"
+                      onClick={() => setOriginalTextPopup({ content: post.original_content, lang: post.translation_lang })}
+                    >
+                      Voir langue d'origine
+                    </button>
+                  )}
                   
                   {post.image_urls && post.image_urls.length > 0 ? (
-                    <div className="post-images">
-                      {post.image_urls.map((img, idx) => (
-                        <img 
-                          key={idx} 
-                          src={img} 
-                          alt="Post" 
-                          className="post-image cursor-pointer hover:opacity-80 transition-opacity" 
-                          loading="lazy" 
-                          onClick={() => handleOpenGallery(post.image_urls, idx)}
-                        />
-                      ))}
-                    </div>
+                    <ImageCarousel images={post.image_urls} onImageClick={handleOpenGallery} />
                   ) : post.image_url ? (
                     <div className="post-images">
                        <img 
@@ -1430,6 +1429,24 @@ export default function FeedPage() {
                   }}
                 />
               </label>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Original Text Popup */}
+      {originalTextPopup && (
+        <div className="modal-overlay" onClick={() => setOriginalTextPopup(null)}>
+          <div className="original-text-popup glass" onClick={(e) => e.stopPropagation()}>
+            <div className="original-text-popup-header">
+              <h3 className="font-bold text-lg">🌐 Langue d'origine</h3>
+              <button className="icon-btn" onClick={() => setOriginalTextPopup(null)}><X size={20} /></button>
+            </div>
+            <div className="original-text-popup-body">
+              <p className="original-text-content">{originalTextPopup.content}</p>
+            </div>
+            <div className="original-text-popup-footer">
+              <button className="btn btn-primary" onClick={() => setOriginalTextPopup(null)}>Fermer</button>
             </div>
           </div>
         </div>

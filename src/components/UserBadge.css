@@ -1,0 +1,98 @@
+/* Badge styles */
+.badge-orbit-medal {
+  width: 22px;
+  height: 22px;
+  object-fit: contain;
+  vertical-align: middle;
+  margin-left: 4px;
+}
+
+.badge-verified-wrap {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.25rem 0.6rem 0.25rem 0.4rem;
+  border-radius: 999px;
+  background: linear-gradient(155deg, #101733, #0c1430 70%);
+  border: 1px solid rgba(91,141,255,0.35);
+  box-shadow:
+    0 0 0 1px rgba(36,81,255,0.08) inset,
+    0 4px 10px rgba(36,81,255,0.3),
+    0 0 15px rgba(91,141,255,0.25);
+  overflow: hidden;
+  cursor: default;
+  vertical-align: middle;
+  margin-left: 6px;
+  transform: scale(0.85);
+  transform-origin: left center;
+}
+
+.badge-verified-wrap::before {
+  content: "";
+  position: absolute;
+  top: -50%;
+  left: -30%;
+  width: 40%;
+  height: 200%;
+  background: linear-gradient(
+    75deg,
+    transparent,
+    rgba(255,255,255,0.28),
+    transparent
+  );
+  transform: skewX(-20deg);
+  animation: badgeSweep 3.2s ease-in-out infinite;
+}
+
+@keyframes badgeSweep {
+  0%   { left: -30%; }
+  55%  { left: 130%; }
+  100% { left: 130%; }
+}
+
+.badge-verified-circle {
+  position: relative;
+  z-index: 2;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 30%, #5b8dff, #2451ff 70%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  box-shadow: 0 0 6px rgba(91,141,255,0.8);
+}
+
+.badge-verified-circle svg {
+  width: 8px;
+  height: 8px;
+  stroke: #f5f8ff;
+}
+
+.badge-verified-text {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  line-height: 1;
+}
+
+.badge-verified-text .badge-label {
+  font-family: 'Fraunces', serif;
+  font-weight: 600;
+  font-size: 0.72rem;
+  color: #f5f8ff;
+  letter-spacing: 0.01em;
+  white-space: nowrap;
+}
+
+.badge-verified-text .badge-sub {
+  font-size: 0.45rem;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: #cfe0ff;
+  opacity: 0.75;
+  white-space: nowrap;
+}

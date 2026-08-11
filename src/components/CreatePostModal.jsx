@@ -31,6 +31,9 @@ export default function CreatePostModal({ isOpen, onClose, groupId }) {
   const textareaRef = useRef(null);
   const [showFontMenu, setShowFontMenu] = useState(false);
   const [selectedFont, setSelectedFont] = useState(FONTS[0]);
+  const [targetLanguage, setTargetLanguage] = useState('');
+  const [originalContent, setOriginalContent] = useState('');
+  const [isTranslating, setIsTranslating] = useState(false);
 
   if (!isOpen) return null;
 
@@ -121,6 +124,60 @@ export default function CreatePostModal({ isOpen, onClose, groupId }) {
     }
   };
 
+  const LANGUAGES = [
+    { code: 'en', name: 'Anglais' },
+    { code: 'es', name: 'Espagnol' },
+    { code: 'de', name: 'Allemand' },
+    { code: 'it', name: 'Italien' },
+    { code: 'pt', name: 'Portugais' },
+    { code: 'zh', name: 'Chinois' },
+    { code: 'ar', name: 'Arabe' },
+    { code: 'ru', name: 'Russe' },
+    { code: 'ja', name: 'Japonais' }
+  ];
+
+  const handleLanguageChange = async (langCode) => {
+    if (!langCode) {
+      if (originalContent) {
+        setContent(originalContent);
+        setOriginalContent('');
+      }
+      setTargetLanguage('');
+      return;
+    }
+
+    if (!content.trim()) {
+      setTargetLanguage(langCode);
+      return;
+    }
+
+    setIsTranslating(true);
+    const textToTranslate = originalContent || content;
+    if (!originalContent) {
+      setOriginalContent(content);
+    }
+    
+    try {
+      const params = new URLSearchParams({ q: textToTranslate, langpair: `fr|${langCode}` });
+      const response = await fetch(`https://api.mymemory.translated.net/get?${params}`);
+      if (!response.ok) {
+        throw new Error("Erreur réseau (" + response.status + ")");
+      }
+      const data = await response.json();
+      if (data.responseStatus && data.responseStatus !== 200) {
+        throw new Error(data.responseDetails || "Échec de la traduction");
+      }
+      setContent(data.responseData.translatedText);
+      setTargetLanguage(langCode);
+      toast.success('Traduction réussie !');
+    } catch (err) {
+      console.error(err);
+      toast.error('Erreur de traduction : ' + err.message);
+    } finally {
+      setIsTranslating(false);
+    }
+  };
+
   const handlePublish = async () => {
     if ((!content.trim() && selectedImages.length === 0 && !audioBlob) || !user) return;
 
@@ -146,12 +203,28 @@ export default function CreatePostModal({ isOpen, onClose, groupId }) {
         card_style: selectedFont.family
       };
 
+      if (originalContent && targetLanguage) {
+        postData.original_content = originalContent.trim();
+        postData.translation_lang = targetLanguage;
+      }
+
       if (audioUrl) {
         postData.audio_url = audioUrl;
       }
 
       let { error } = await supabase.from('posts').insert(postData);
-      if (error && error.code === 'PGRST204' && audioUrl) {
+      
+      if (error && error.message && (error.message.includes('original_content') || error.message.includes('translation_lang') || error.message.includes('column'))) {
+        delete postData.original_content;
+        delete postData.translation_lang;
+        const retry = await supabase.from('posts').insert(postData);
+        error = retry.error;
+        if (!error) {
+          toast.error("Attention : Ajoutez les colonnes 'original_content' (text) et 'translation_lang' (text) à votre table 'posts' dans Supabase pour sauvegarder la langue d'origine.", { duration: 8000 });
+        }
+      }
+
+      if (error && (error.code === 'PGRST204' || (error.message && error.message.includes('audio_url'))) && audioUrl) {
         delete postData.audio_url;
         const retry = await supabase.from('posts').insert(postData);
         error = retry.error;
@@ -160,6 +233,8 @@ export default function CreatePostModal({ isOpen, onClose, groupId }) {
       if (error) throw error;
 
       setContent('');
+      setOriginalContent('');
+      setTargetLanguage('');
       setSelectedImages([]);
       setAudioBlob(null);
       setSelectedFont(FONTS[0]);
@@ -167,7 +242,7 @@ export default function CreatePostModal({ isOpen, onClose, groupId }) {
       onClose();
     } catch (err) {
       console.error('Error publishing post:', err);
-      toast.error("Une erreur est survenue lors de la publication.");
+      toast.error("Erreur de publication : " + (err.message || "inconnue"));
     } finally {
       setIsPublishing(false);
     }
@@ -265,6 +340,34 @@ export default function CreatePostModal({ isOpen, onClose, groupId }) {
             </div>
           )}
 
+          {/* Translation selector */}
+          <div className="translation-selector-container" style={{ marginTop: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            <span style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Traduire le post en :</span>
+            <select
+              value={targetLanguage}
+              onChange={(e) => handleLanguageChange(e.target.value)}
+              disabled={isTranslating || isPublishing}
+              style={{
+                background: 'rgba(255,255,255,0.05)',
+                border: '1px solid rgba(255,255,255,0.1)',
+                color: 'white',
+                padding: '0.4rem 0.8rem',
+                borderRadius: '8px',
+                outline: 'none',
+                fontSize: '0.85rem',
+                cursor: 'pointer'
+              }}
+            >
+              <option value="" style={{ background: '#191923', color: 'white' }}>-- Pas de traduction --</option>
+              {LANGUAGES.map((lang) => (
+                <option key={lang.code} value={lang.code} style={{ background: '#191923', color: 'white' }}>
+                  {lang.name}
+                </option>
+              ))}
+            </select>
+            {isTranslating && <span className="create-post-spinner" style={{ width: '14px', height: '14px' }}></span>}
+          </div>
+
           {/* Image Previews */}
           {selectedImages.length > 0 && (
             <div className="create-post-previews">
@@ -310,7 +413,7 @@ export default function CreatePostModal({ isOpen, onClose, groupId }) {
             <button
               className={`create-post-tool-btn bg-transparent border-none outline-none ${isRecording ? 'recording' : ''}`}
               onClick={isRecording ? stopRecording : startRecording}
-              disabled={isPublishing || audioBlob !== null}
+              disabled={isPublishing}
             >
               <Mic size={20} />
               <span className="create-post-tool-label">{isRecording ? 'Arrêter' : 'Vocal'}</span>
