@@ -9,7 +9,6 @@ import {
     LogOut,
     MapPin,
     Palette,
-    Sun,
     UserCircle,
     UserMinus,
     UserPlus,
@@ -25,7 +24,7 @@ import { uploadToCloudinary } from '../utils/helpers';
 import './SettingsPage.css';
 
 export default function SettingsPage() {
-  const { isDarkMode, toggleTheme } = useTheme();
+  const { isDarkMode } = useTheme();
   const { user, profile, setProfile } = useAuth();
   const navigate = useNavigate();
   
@@ -249,15 +248,6 @@ export default function SettingsPage() {
           />
           <div className="settings-divider" />
 
-          {/* Mode clair / sombre */}
-          <SettingsItem 
-            icon={Sun} iconColor="#FFD166"
-            label="Mode clair / sombre"
-            subLabel={isDarkMode ? 'Sombre' : 'Clair'}
-            action={toggleTheme}
-            rightElement={<ToggleSwitch enabled={isDarkMode} />}
-          />
-          <div className="settings-divider" />
 
           {/* Filtre par pays */}
           <SettingsItem 

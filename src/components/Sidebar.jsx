@@ -4,6 +4,7 @@ import { NavLink, useNavigate } from 'react-router-dom';
 import logo from '../assets/logo.png';
 import notificationSound from '../assets/tir.ogg';
 import { useAuth } from '../hooks/useAuth';
+import { usePostsCount } from '../hooks/usePostsCount';
 import { supabase } from '../services/supabase';
 import GroupCreateModal from './GroupCreateModal';
 import GroupListModal from './GroupListModal';
@@ -17,39 +18,9 @@ export default function Sidebar({ isOpen, onClose, onCreatePost }) {
   const [isGroupModalOpen, setIsGroupModalOpen] = useState(false);
   const [isGroupListOpen, setIsGroupListOpen] = useState(false);
 
-  const [postsCount, setPostsCount] = useState(0);
+  const postsCount = usePostsCount();
 
-  useEffect(() => {
-    fetchPostsCount();
 
-    const channel = supabase
-      .channel('public-posts-count-sidebar')
-      .on('postgres_changes', {
-        event: '*',
-        schema: 'public',
-        table: 'posts'
-      }, () => {
-        fetchPostsCount();
-      })
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, []);
-
-  const fetchPostsCount = async () => {
-    try {
-      const { count, error } = await supabase
-        .from('posts')
-        .select('*', { count: 'exact', head: true });
-      if (!error) {
-        setPostsCount(count || 0);
-      }
-    } catch (e) {
-      console.error('Error fetching posts count:', e);
-    }
-  };
 
   useEffect(() => {
     if (!user) return;

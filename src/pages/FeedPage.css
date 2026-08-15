@@ -1319,6 +1319,7 @@ Create By Ralph Dev  */
   animation: popupSlideIn 0.25s ease;
 }
 
+/* MISE A JOUR DU CSS */ 
 @keyframes popupSlideIn {
   from {
     opacity: 0;
@@ -1357,3 +1358,4 @@ Create By Ralph Dev  */
   border-top: 1px solid rgba(255, 255, 255, 0.08);
 }
 
+/* MISE A JOUR DU CSS */ 

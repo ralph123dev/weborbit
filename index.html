@@ -4,13 +4,40 @@
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="src/assets/logo.png" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <!-- Prevent automatic page translation by browsers / extensions -->
+    <meta name="google" content="notranslate" />
     <title>weborbit</title>
     <script type="module" src="https://unpkg.com/ionicons@7.1.0/dist/ionicons/ionicons.esm.js"></script>
     <script nomodule src="https://unpkg.com/ionicons@7.1.0/dist/ionicons/ionicons.js"></script>
     <script src="https://accounts.google.com/gsi/client" async defer></script>
   </head>
-  <body>
-    <div id="root"></div>
+  <body translate="no" class="notranslate">
+    <div id="root" translate="no" class="notranslate"></div>
+    <script>
+      // Ensure translate attributes and notranslate class are applied
+      (function(){
+        try {
+          document.documentElement.setAttribute('translate','no');
+          document.documentElement.classList.add('notranslate');
+          document.addEventListener('DOMContentLoaded', function(){
+            document.body.setAttribute('translate','no');
+            document.body.classList.add('notranslate');
+            var root = document.getElementById('root');
+            if (root) { root.setAttribute('translate','no'); root.classList.add('notranslate'); }
+          });
+
+          // Reapply on DOM mutations (some extensions modify DOM after load)
+          var observer = new MutationObserver(function(){
+            document.querySelectorAll('*').forEach(function(el){
+              if (!el.hasAttribute || el.hasAttribute('translate') === false) return;
+              if (!el.hasAttribute('translate')) el.setAttribute('translate','no');
+              if (!el.classList.contains('notranslate')) el.classList.add('notranslate');
+            });
+          });
+          observer.observe(document.documentElement || document.body, { childList: true, subtree: true });
+        } catch(e) { /* ignore */ }
+      })();
+    </script>
     <script type="module" src="/src/main.jsx"></script>
   </body>
 </html>

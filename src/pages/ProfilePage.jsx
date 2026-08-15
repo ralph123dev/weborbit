@@ -1,7 +1,8 @@
-import { Calendar, Heart, MapPin, MessageSquare, MoreHorizontal, Share2 } from 'lucide-react';
+import { Calendar, Heart, MapPin, MessageSquare, Moon, MoreHorizontal, Share2, Sun } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
+import { useTheme } from '../hooks/useTheme';
 import { supabase } from '../services/supabase';
 import { formatCount, formatTextWithLinks, formatTimeAgo } from '../utils/helpers';
 import './FeedPage.css'; // Reuse post styles
@@ -17,6 +18,7 @@ export default function ProfilePage() {
   const [loading, setLoading] = useState(true);
   const [stats, setStats] = useState({ followers: 0, following: 0 });
   const [isFollowing, setIsFollowing] = useState(false);
+  const { isDarkMode, toggleTheme } = useTheme();
 
   const isOwnProfile = user?.id === userId;
 
@@ -117,9 +119,19 @@ export default function ProfilePage() {
           />
           <div className="flex-1"></div>
           {isOwnProfile ? (
-            <button className="btn btn-outline" onClick={() => navigate('/settings')}>
-              Éditer le profil
-            </button>
+            <div className="flex items-center gap-2">
+              <button 
+                className="btn btn-outline profile-theme-toggle" 
+                onClick={toggleTheme}
+                title={isDarkMode ? 'Mode clair' : 'Mode sombre'}
+                style={{ padding: '0.5rem', borderRadius: '50%', minWidth: '40px', height: '40px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+              >
+                {isDarkMode ? <Sun size={18} /> : <Moon size={18} />}
+              </button>
+              <button className="btn btn-outline" onClick={() => navigate('/settings')}>
+                Éditer le profil
+              </button>
+            </div>
           ) : (
             <button className={`btn ${isFollowing ? 'btn-outline' : 'btn-primary'}`} onClick={handleFollow}>
               {isFollowing ? 'Abonné' : 'S\'abonner'}

@@ -38,6 +38,126 @@
   font-size: 1.25rem;
 }
 
+/* Header right actions */
+.header-right-actions {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.header-home-icon-container {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.5rem;
+  border-radius: 50%;
+  background-color: var(--surface-hover);
+  transition: all 0.2s ease;
+}
+
+.header-home-icon-container:hover {
+  background-color: var(--surface-color);
+}
+
+.header-home-badge {
+  position: absolute;
+  top: -4px;
+  right: -4px;
+  background-color: #ef4444;
+  color: white;
+  font-size: 0.65rem;
+  font-weight: 800;
+  padding: 2px 6px;
+  border-radius: 12px;
+  border: 2px solid var(--bg-color-alt);
+  min-width: 20px;
+  text-align: center;
+}
+
+/* Search container in header */
+.layout-search-container {
+  flex: 1;
+  margin: 0 1rem;
+  position: relative;
+  max-width: 400px;
+}
+
+.layout-search-input-wrapper {
+  display: flex;
+  align-items: center;
+  background-color: var(--surface-hover);
+  border-radius: 20px;
+  padding: 0.4rem 0.8rem;
+  border: 1px solid var(--border-color);
+}
+
+.layout-search-icon {
+  color: var(--text-secondary);
+  margin-right: 0.5rem;
+}
+
+.layout-search-input-wrapper input {
+  flex: 1;
+  background: none;
+  border: none;
+  color: var(--text-primary);
+  font-size: 0.9rem;
+  outline: none;
+}
+
+.layout-search-close {
+  background: none;
+  color: var(--text-secondary);
+  font-size: 1.2rem;
+  margin-left: 0.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+
+.layout-search-dropdown {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  margin-top: 0.5rem;
+  background-color: var(--bg-color-alt);
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+  max-height: 300px;
+  overflow-y: auto;
+  z-index: 50;
+  display: flex;
+  flex-direction: column;
+}
+
+.layout-search-result-item {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.75rem 1rem;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.layout-search-result-item:last-child {
+  border-bottom: none;
+}
+
+.layout-search-result-item:hover {
+  background-color: var(--surface-hover);
+}
+
+.layout-search-action-btn {
+  padding: 0.3rem 0.6rem;
+  font-size: 0.75rem;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+}
+
 .mobile-overlay {
   display: none;
   position: fixed;
