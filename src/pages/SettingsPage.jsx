@@ -24,7 +24,7 @@ import { uploadToCloudinary } from '../utils/helpers';
 import './SettingsPage.css';
 
 export default function SettingsPage() {
-  const { isDarkMode } = useTheme();
+  const { isDarkMode, toggleTheme } = useTheme();
   const { user, profile, setProfile } = useAuth();
   const navigate = useNavigate();
   
@@ -424,13 +424,13 @@ export default function SettingsPage() {
           )}
           <div className="settings-divider" />
 
-          {/* Thème des discussions */}
+          {/* Mode clair / sombre */}
           <SettingsItem 
             icon={Palette} iconColor="#6A5AFF"
-            label="Thème des discussions"
-            subLabel="Cosmic Night"
-            action={() => alert('Les thèmes de discussion seront disponibles prochainement.')}
-            rightElement={<ChevronRight size={20} className="text-secondary" />}
+            label={isDarkMode ? 'Mode sombre' : 'Mode clair'}
+            subLabel={isDarkMode ? 'Thème foncé activé' : 'Thème clair activé'}
+            action={toggleTheme}
+            rightElement={<ToggleSwitch enabled={isDarkMode} />}
           />
           <div className="settings-divider" />
 

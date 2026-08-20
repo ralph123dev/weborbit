@@ -58,6 +58,11 @@ export default function FeedPage() {
   const [isCopied, setIsCopied] = useState(false);
   const [embedPost, setEmbedPost] = useState(null);
   const [isEmbedCopied, setIsEmbedCopied] = useState(false);
+  const [repostPost, setRepostPost] = useState(null);
+  const [repostContent, setRepostContent] = useState('');
+  const [repostImages, setRepostImages] = useState([]);
+  const [repostKeepOriginalImage, setRepostKeepOriginalImage] = useState(true);
+  const [isPublishingRepost, setIsPublishingRepost] = useState(false);
 
   // User Profile Panel state
   const [profilePanel, setProfilePanel] = useState(null);
@@ -489,6 +494,72 @@ export default function FeedPage() {
     setIsEmbedCopied(false);
   };
 
+  const handleOpenRepost = (post) => {
+    if (!user) {
+      window.dispatchEvent(new Event('open-auth-modal'));
+      return;
+    }
+
+    const sourceText = post?.content ? post.content.replace(/<[^>]*>/g, '').trim() : '';
+    setRepostPost(post);
+    setRepostContent(sourceText);
+    setRepostImages([]);
+    setRepostKeepOriginalImage(Boolean(post?.image_urls?.length || post?.image_url));
+    setPostDropdownOpen(null);
+  };
+
+  const handleAddRepostImages = (e) => {
+    if (!e.target.files || e.target.files.length === 0) return;
+    const filesArray = Array.from(e.target.files);
+    setRepostImages(prev => [...prev, ...filesArray]);
+    e.target.value = '';
+  };
+
+  const handleRemoveRepostImage = (index) => {
+    setRepostImages(prev => prev.filter((_, i) => i !== index));
+  };
+
+  const handlePublishRepost = async () => {
+    if (!user || !repostPost) return;
+    if (!repostContent.trim() && !repostImages.length && !repostKeepOriginalImage) return;
+
+    setIsPublishingRepost(true);
+    try {
+      const uploadedImageUrls = [];
+
+      if (repostKeepOriginalImage) {
+        const originalImage = repostPost.image_urls?.[0] || repostPost.image_url;
+        if (originalImage) uploadedImageUrls.push(originalImage);
+      }
+
+      for (const file of repostImages) {
+        const url = await uploadToCloudinary(file);
+        uploadedImageUrls.push(url);
+      }
+
+      const { error } = await supabase.from('posts').insert({
+        content: repostContent.trim(),
+        user_id: user.id,
+        image_urls: uploadedImageUrls,
+        image_url: uploadedImageUrls[0] || ''
+      });
+
+      if (error) throw error;
+
+      toast.success('Publication repartagée avec succès !');
+      setRepostPost(null);
+      setRepostContent('');
+      setRepostImages([]);
+      setRepostKeepOriginalImage(true);
+      await fetchPosts();
+    } catch (err) {
+      console.error('Error publishing repost:', err);
+      toast.error('Erreur lors du repartage de la publication');
+    } finally {
+      setIsPublishingRepost(false);
+    }
+  };
+
   const handleCopyLink = () => {
     const link = `${window.location.origin}/post/${sharePost.id}`;
     navigator.clipboard.writeText(link);
@@ -745,16 +816,30 @@ export default function FeedPage() {
                     )}
                   </div>
                   
-                  <div className="relative">
-                    <button className="post-options-btn" onClick={() => setPostDropdownOpen(postDropdownOpen === post.id ? null : post.id)}>
-                      <MoreHorizontal size={20} />
+                  <div className="dropdown position-relative">
+                    <button
+                      className="btn btn-light btn-sm post-options-btn dropdown-toggle"
+                      type="button"
+                      onClick={() => setPostDropdownOpen(postDropdownOpen === post.id ? null : post.id)}
+                      aria-expanded={postDropdownOpen === post.id}
+                    >
+                      <MoreHorizontal size={18} />
                     </button>
                     {postDropdownOpen === post.id && (
-                      <div className="absolute right-0 mt-2 w-48 glass rounded-xl shadow-lg overflow-hidden z-20" style={{ border: '1px solid var(--border-color)' }}>
+                      <div className="dropdown-menu dropdown-menu-end show post-dropdown-menu position-absolute end-0 mt-2" style={{ right: 0 }}>
+                        <button
+                          type="button"
+                          className="dropdown-item post-dropdown-item"
+                          onClick={() => handleOpenRepost(post)}
+                        >
+                          🔁 Répartager
+                        </button>
+
                         {post.user_id === user?.id ? (
                           <>
-                            <button 
-                              className="w-full text-left px-4 py-3 hover:bg-white/10 text-sm transition-colors"
+                            <button
+                              type="button"
+                              className="dropdown-item post-dropdown-item"
                               onClick={() => {
                                 setEditingPost(post);
                                 setEditContent(post.content);
@@ -763,16 +848,18 @@ export default function FeedPage() {
                             >
                               ✏️ Modifier
                             </button>
-                            <button 
-                              className="w-full text-left px-4 py-3 hover:bg-white/10 text-sm text-red-500 transition-colors border-t border-white/10"
+                            <button
+                              type="button"
+                              className="dropdown-item post-dropdown-item text-danger"
                               onClick={() => handleDeletePost(post.id)}
                             >
                               🗑️ Supprimer
                             </button>
                           </>
                         ) : (
-                          <button 
-                            className="w-full text-left px-4 py-3 hover:bg-white/10 text-sm text-yellow-500 transition-colors"
+                          <button
+                            type="button"
+                            className="dropdown-item post-dropdown-item text-warning"
                             onClick={() => handleReportPost(post.id)}
                           >
                             ⚠️ Signaler
@@ -919,6 +1006,129 @@ export default function FeedPage() {
                   </button>
                 </div>
               )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {repostPost && (
+        <div className="modal-overlay" onClick={() => {
+          setRepostPost(null);
+          setRepostContent('');
+          setRepostImages([]);
+          setRepostKeepOriginalImage(true);
+        }}>
+          <div className="share-modal glass" style={{ maxWidth: '700px' }} onClick={(e) => e.stopPropagation()}>
+            <div className="share-header">
+              <h3 className="font-bold text-lg">🔁 Répartager</h3>
+              <button className="icon-btn" onClick={() => {
+                setRepostPost(null);
+                setRepostContent('');
+                setRepostImages([]);
+                setRepostKeepOriginalImage(true);
+              }}><X size={20} /></button>
+            </div>
+
+            <div className="share-body" style={{ gap: '1rem' }}>
+              <div className="glass rounded-2xl p-4" style={{ border: '1px solid var(--border-color)' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '12px' }}>
+                  <img
+                    src={repostPost.profiles?.avatar_url || 'https://static.vecteezy.com/system/resources/thumbnails/004/607/791/small_2x/man-face-emotive-icon-smiling-male-character-in-blue-shirt-flat-illustration-isolated-on-white-happy-human-psychological-portrait-positive-emotions-user-avatar-for-app-web-design-vector.jpg'}
+                    alt="Avatar"
+                    className="avatar"
+                    onError={(e) => e.target.src = 'https://static.vecteezy.com/system/resources/thumbnails/004/607/791/small_2x/man-face-emotive-icon-smiling-male-character-in-blue-shirt-flat-illustration-isolated-on-white-happy-human-psychological-portrait-positive-emotions-user-avatar-for-app-web-design-vector.jpg'}
+                  />
+                  <div>
+                    <div className="font-bold text-sm">{repostPost.profiles?.first_name} {repostPost.profiles?.last_name}</div>
+                    <div className="text-xs text-secondary">{formatTimeAgo(repostPost.created_at)}</div>
+                  </div>
+                </div>
+
+                <div
+                  className="text-sm"
+                  style={{ fontFamily: repostPost.card_style && repostPost.card_style !== 'standard' ? repostPost.card_style : undefined }}
+                  dangerouslySetInnerHTML={{ __html: formatTextWithLinks(repostPost.content) }}
+                />
+
+                {(repostPost.image_urls?.length > 0 || repostPost.image_url) && (
+                  <div style={{ marginTop: '12px', position: 'relative' }}>
+                    <img
+                      src={repostPost.image_urls?.[0] || repostPost.image_url}
+                      alt="Post partagé"
+                      className="post-image"
+                      style={{ borderRadius: '16px', maxHeight: '260px', objectFit: 'cover' }}
+                    />
+                    <button
+                      type="button"
+                      className="btn btn-outline btn-sm mt-3"
+                      onClick={() => setRepostKeepOriginalImage(!repostKeepOriginalImage)}
+                    >
+                      {repostKeepOriginalImage ? 'Retirer l’image du post partagé' : 'Inclure l’image du post partagé'}
+                    </button>
+                  </div>
+                )}
+              </div>
+
+              <div>
+                <label className="text-xs font-semibold uppercase text-secondary" style={{ display: 'block', marginBottom: '8px' }}>
+                  Votre message
+                </label>
+                <textarea
+                  className="edit-modal-textarea"
+                  value={repostContent}
+                  onChange={(e) => setRepostContent(e.target.value)}
+                  placeholder="Écrivez quelque chose avant de repartirager..."
+                  rows={5}
+                  autoFocus
+                />
+              </div>
+
+              {repostImages.length > 0 && (
+                <div>
+                  <div className="text-xs font-semibold uppercase text-secondary mb-2">Images ajoutées</div>
+                  <div className="mobile-composer-preview-images">
+                    {repostImages.map((file, idx) => (
+                      <div key={idx} className="mobile-preview-image-wrapper">
+                        <img src={URL.createObjectURL(file)} alt="Preview" className="mobile-preview-img" />
+                        <button className="remove-img-btn" onClick={() => handleRemoveRepostImage(idx)}>
+                          <X size={12} />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              <div className="flex items-center justify-between gap-3 flex-wrap">
+                <label className="btn btn-outline btn-sm cursor-pointer">
+                  <ImageIcon size={16} /> Ajouter une image
+                  <input type="file" multiple accept="image/*" style={{ display: 'none' }} onChange={handleAddRepostImages} />
+                </label>
+
+                {repostPost.image_urls?.length > 0 || repostPost.image_url ? (
+                  <button
+                    type="button"
+                    className="btn btn-outline btn-sm"
+                    onClick={() => setRepostKeepOriginalImage(!repostKeepOriginalImage)}
+                  >
+                    {repostKeepOriginalImage ? 'Supprimer l’image' : 'Ajouter l’image'}
+                  </button>
+                ) : null}
+              </div>
+
+              <div className="edit-modal-footer" style={{ padding: 0, marginTop: '0.25rem' }}>
+                <button className="btn btn-outline" onClick={() => {
+                  setRepostPost(null);
+                  setRepostContent('');
+                  setRepostImages([]);
+                  setRepostKeepOriginalImage(true);
+                }}>
+                  Annuler
+                </button>
+                <button className="btn btn-primary" onClick={handlePublishRepost} disabled={isPublishingRepost || (!repostContent.trim() && !repostImages.length && !repostKeepOriginalImage)}>
+                  {isPublishingRepost ? 'Partage...' : 'Partager'}
+                </button>
+              </div>
             </div>
           </div>
         </div>
